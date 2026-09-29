@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { SignJWT } from 'jose';
 import pg from 'pg';
-import { PORT, SESSION_SECRET } from '../playwright.config';
+import { OPERATORS, PORT, SESSION_SECRET } from '../playwright.config';
 
 // Phase 4 proof: the tradesman's space at 375 px, in French and English — his documents, the
 // editor, issuance, a share link for his client, his presentation — and another organization's
@@ -22,15 +22,21 @@ for (const name of ['ENDPOINT', 'REGION', 'BUCKET', 'ACCESS_KEY_ID', 'SECRET_ACC
 let draftId = 0;
 let issuedId = 0;
 let foreignId = 0;
+let issuedNumber = '';
 
-async function signIn(context: BrowserContext, organizationId: string, locale: 'fr' | 'en' = 'fr') {
+async function signIn(
+  context: BrowserContext,
+  organizationId: string,
+  locale: 'fr' | 'en' = 'fr',
+  twoFactor = false,
+) {
   const session = await new SignJWT({
     email: 'p22890000000@phone.kete.invalid',
     name: 'Kodjo',
     org: organizationId,
     role: 'owner',
     apps: {},
-    two_factor: false,
+    two_factor: twoFactor,
   })
     .setProtectedHeader({ alg: 'HS256' })
     .setSubject(`usr_${organizationId}`)
@@ -83,7 +89,7 @@ test.beforeAll(async () => {
     { ...sale, subject: 'Garde-corps' },
   );
   const { sha256 } = await documents.preview({ organizationId: A }, issuedId);
-  await documents.issue({ organizationId: A }, issuedId, { sha256 });
+  issuedNumber = (await documents.issue({ organizationId: A }, issuedId, { sha256 })).number;
   foreignId = await documents.createDraft(
     { organizationId: B },
     { ...sale, subject: 'Porte en bois' },
@@ -222,4 +228,34 @@ test("another organization's document is not found", async ({ page, context }) =
   await expect(page.getByRole('heading', { name: 'Ce document est introuvable.' })).toBeVisible();
   const pdf = await page.request.get(`/api/documents/${foreignId}/pdf`);
   expect(pdf.status()).toBe(404);
+});
+
+test('a client is kept out of the operator space', async ({ page, context }) => {
+  await signIn(context, A);
+  await page.goto('/operations');
+  await expect(page.getByText('Cet espace est réservé aux opérateurs Kete.')).toBeVisible();
+  const read = await page.request.post('/api/operations/read', {
+    form: { organizationId: A, number: issuedNumber, reason: 'Le client conteste le total' },
+  });
+  expect(read.status()).toBe(403);
+});
+
+test('an operator reads a document with a reason, and the journal says so', async ({
+  page,
+  context,
+}) => {
+  await signIn(context, OPERATORS, 'fr', true);
+  await page.goto('/operations');
+  await expect(page.getByRole('heading', { name: 'Opérations Firmo' })).toBeVisible();
+  const refused = await page.request.post('/api/operations/read', {
+    form: { organizationId: A, number: issuedNumber, reason: '' },
+  });
+  expect(refused.status()).toBe(422);
+  const read = await page.request.post('/api/operations/read', {
+    form: { organizationId: A, number: issuedNumber, reason: 'Le client conteste le total' },
+  });
+  expect(read.headers()['content-type']).toBe('application/pdf');
+  await page.reload();
+  await expect(page.getByText(`${issuedNumber} · ${A}`)).toBeVisible();
+  await shot(page, '7-operations');
 });

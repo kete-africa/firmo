@@ -16,4 +16,5 @@ export type {
   OutboundAction,
   ToolCall,
   TurnUsage,
+  UsageEvents,
 } from './ports';

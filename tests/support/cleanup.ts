@@ -21,6 +21,7 @@ export async function purgeOrganizations(owner: pg.Pool, organizations: string[]
     for (const table of [
       'conversations',
       'ai_usage',
+      'kete_outbox',
       'messaging_identities',
       'document_payments',
       'documents',

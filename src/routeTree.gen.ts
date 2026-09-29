@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as LienExpireRouteImport } from './routes/lien-expire'
+import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as DotwellKnownKeteRouteImport } from './routes/[.]well-known/kete'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthConnexionRouteImport } from './routes/auth/connexion'
@@ -23,6 +24,7 @@ import { Route as EspaceAbonnementRouteImport } from './routes/espace/abonnement
 import { Route as EspacePresentationRouteImport } from './routes/espace/presentation'
 import { Route as WebhooksTelegramRouteImport } from './routes/webhooks/telegram'
 import { Route as WebhooksWhatsappRouteImport } from './routes/webhooks/whatsapp'
+import { Route as ApiOperationsReadRouteImport } from './routes/api/operations/read'
 import { Route as ApiPresentationLogoRouteImport } from './routes/api/presentation/logo'
 import { Route as ApiPresentationPreviewRouteImport } from './routes/api/presentation/preview'
 import { Route as EspaceDocumentsIndexRouteImport } from './routes/espace/documents.index'
@@ -47,6 +49,11 @@ const HealthRoute = HealthRouteImport.update({
 const LienExpireRoute = LienExpireRouteImport.update({
   id: '/lien-expire',
   path: '/lien-expire',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OperationsRoute = OperationsRouteImport.update({
+  id: '/operations',
+  path: '/operations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotwellKnownKeteRoute = DotwellKnownKeteRouteImport.update({
@@ -99,6 +106,11 @@ const WebhooksWhatsappRoute = WebhooksWhatsappRouteImport.update({
   path: '/webhooks/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOperationsReadRoute = ApiOperationsReadRouteImport.update({
+  id: '/api/operations/read',
+  path: '/api/operations/read',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPresentationLogoRoute = ApiPresentationLogoRouteImport.update({
   id: '/api/presentation/logo',
   path: '/api/presentation/logo',
@@ -130,6 +142,7 @@ export interface FileRoutesByFullPath {
   '/espace': typeof EspaceRouteWithChildren
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
+  '/operations': typeof OperationsRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
@@ -140,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
   '/espace/': typeof EspaceIndexRoute
+  '/api/operations/read': typeof ApiOperationsReadRoute
   '/api/presentation/logo': typeof ApiPresentationLogoRoute
   '/api/presentation/preview': typeof ApiPresentationPreviewRoute
   '/espace/documents/$id': typeof EspaceDocumentsIdRoute
@@ -150,6 +164,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
+  '/operations': typeof OperationsRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
@@ -160,6 +175,7 @@ export interface FileRoutesByTo {
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
   '/espace': typeof EspaceIndexRoute
+  '/api/operations/read': typeof ApiOperationsReadRoute
   '/api/presentation/logo': typeof ApiPresentationLogoRoute
   '/api/presentation/preview': typeof ApiPresentationPreviewRoute
   '/espace/documents/$id': typeof EspaceDocumentsIdRoute
@@ -172,6 +188,7 @@ export interface FileRoutesById {
   '/espace': typeof EspaceRouteWithChildren
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
+  '/operations': typeof OperationsRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
@@ -182,6 +199,7 @@ export interface FileRoutesById {
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
   '/espace/': typeof EspaceIndexRoute
+  '/api/operations/read': typeof ApiOperationsReadRoute
   '/api/presentation/logo': typeof ApiPresentationLogoRoute
   '/api/presentation/preview': typeof ApiPresentationPreviewRoute
   '/espace/documents/$id': typeof EspaceDocumentsIdRoute
@@ -195,6 +213,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/health'
     | '/lien-expire'
+    | '/operations'
     | '/.well-known/kete'
     | '/auth/callback'
     | '/auth/connexion'
@@ -205,6 +224,7 @@ export interface FileRouteTypes {
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
     | '/espace/'
+    | '/api/operations/read'
     | '/api/presentation/logo'
     | '/api/presentation/preview'
     | '/espace/documents/$id'
@@ -215,6 +235,7 @@ export interface FileRouteTypes {
     | '/'
     | '/health'
     | '/lien-expire'
+    | '/operations'
     | '/.well-known/kete'
     | '/auth/callback'
     | '/auth/connexion'
@@ -225,6 +246,7 @@ export interface FileRouteTypes {
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
     | '/espace'
+    | '/api/operations/read'
     | '/api/presentation/logo'
     | '/api/presentation/preview'
     | '/espace/documents/$id'
@@ -236,6 +258,7 @@ export interface FileRouteTypes {
     | '/espace'
     | '/health'
     | '/lien-expire'
+    | '/operations'
     | '/.well-known/kete'
     | '/auth/callback'
     | '/auth/connexion'
@@ -246,6 +269,7 @@ export interface FileRouteTypes {
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
     | '/espace/'
+    | '/api/operations/read'
     | '/api/presentation/logo'
     | '/api/presentation/preview'
     | '/espace/documents/$id'
@@ -258,6 +282,7 @@ export interface RootRouteChildren {
   EspaceRoute: typeof EspaceRouteWithChildren
   HealthRoute: typeof HealthRoute
   LienExpireRoute: typeof LienExpireRoute
+  OperationsRoute: typeof OperationsRoute
   DotwellKnownKeteRoute: typeof DotwellKnownKeteRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthConnexionRoute: typeof AuthConnexionRoute
@@ -265,6 +290,7 @@ export interface RootRouteChildren {
   DTokenRoute: typeof DTokenRoute
   WebhooksTelegramRoute: typeof WebhooksTelegramRoute
   WebhooksWhatsappRoute: typeof WebhooksWhatsappRoute
+  ApiOperationsReadRoute: typeof ApiOperationsReadRoute
   ApiPresentationLogoRoute: typeof ApiPresentationLogoRoute
   ApiPresentationPreviewRoute: typeof ApiPresentationPreviewRoute
   ApiDocumentsIdPdfRoute: typeof ApiDocumentsIdPdfRoute
@@ -298,6 +324,13 @@ declare module '@tanstack/react-router' {
       path: '/lien-expire'
       fullPath: '/lien-expire'
       preLoaderRoute: typeof LienExpireRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/operations': {
+      id: '/operations'
+      path: '/operations'
+      fullPath: '/operations'
+      preLoaderRoute: typeof OperationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/kete': {
@@ -370,6 +403,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebhooksWhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/operations/read': {
+      id: '/api/operations/read'
+      path: '/api/operations/read'
+      fullPath: '/api/operations/read'
+      preLoaderRoute: typeof ApiOperationsReadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/presentation/logo': {
       id: '/api/presentation/logo'
       path: '/api/presentation/logo'
@@ -432,6 +472,7 @@ const rootRouteChildren: RootRouteChildren = {
   EspaceRoute: EspaceRouteWithChildren,
   HealthRoute: HealthRoute,
   LienExpireRoute: LienExpireRoute,
+  OperationsRoute: OperationsRoute,
   DotwellKnownKeteRoute: DotwellKnownKeteRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthConnexionRoute: AuthConnexionRoute,
@@ -439,6 +480,7 @@ const rootRouteChildren: RootRouteChildren = {
   DTokenRoute: DTokenRoute,
   WebhooksTelegramRoute: WebhooksTelegramRoute,
   WebhooksWhatsappRoute: WebhooksWhatsappRoute,
+  ApiOperationsReadRoute: ApiOperationsReadRoute,
   ApiPresentationLogoRoute: ApiPresentationLogoRoute,
   ApiPresentationPreviewRoute: ApiPresentationPreviewRoute,
   ApiDocumentsIdPdfRoute: ApiDocumentsIdPdfRoute,

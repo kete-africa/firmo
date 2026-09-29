@@ -5,9 +5,11 @@ import {
 } from '@/features/conversation';
 import { createDocuments, type Documents } from '@/features/documents';
 import { createIdentity, type Identity } from '@/features/identity';
+import { createOperations, type Operations } from '@/features/operations';
 import { createPlans, type Plans } from '@/features/plans';
 import { accountDirectory } from './account';
 import { env } from './env';
+import { keteEvents } from './events';
 import { getStorage } from './files';
 import { openaiModel } from './openai';
 import { telegramChannel } from './telegram';
@@ -47,6 +49,7 @@ let wired:
       documents: Documents;
       identity: Identity;
       plans: Plans;
+      operations: Operations;
       conversation: Conversation | null;
     }
   | undefined;
@@ -59,18 +62,26 @@ export function services() {
       clientSecret: env.clientSecret,
     });
     const plans = createPlans({ subscriptions: account });
+    const events = keteEvents();
     const documents = createDocuments({
       renderer: typstRenderer(),
       files: getStorage(),
       gate: plans.gate,
+      events,
     });
     const identity = createIdentity({ directory: account, publicUrl: env.publicUrl });
     const channels = configuredChannels();
     const conversation =
       process.env.OPENAI_API_KEY && Object.keys(channels).length > 0
-        ? createConversation({ model: openaiModel(), channels, identity, documents })
+        ? createConversation({ model: openaiModel(), channels, identity, documents, events })
         : null;
-    wired = { documents, identity, plans, conversation };
+    wired = {
+      documents,
+      identity,
+      plans,
+      operations: createOperations({ documents }),
+      conversation,
+    };
   }
   return wired;
 }

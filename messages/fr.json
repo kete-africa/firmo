@@ -222,5 +222,20 @@
   "plan_manage": "Gérer mon abonnement",
   "plan_where_paid": "Le paiement se fait dans ton Compte Kete, qui réunit tes abonnements Kete.",
   "document_plan_required": "Tes documents offerts sont utilisés : abonne-toi pour émettre celui-ci. Il reste en brouillon.",
-  "document_quota_reached": "Tu as émis tous les documents de ta période en cours. Celui-ci reste en brouillon."
+  "document_quota_reached": "Tu as émis tous les documents de ta période en cours. Celui-ci reste en brouillon.",
+  "ops_title": "Opérations Firmo",
+  "ops_refused": "Cet espace est réservé aux opérateurs Kete.",
+  "ops_refused_two_factor": "Active la double authentification dans ton Compte Kete pour entrer ici.",
+  "ops_incidents": "Messages en échec",
+  "ops_no_incident": "Aucun message en échec.",
+  "ops_attempts": "{count} tentative(s)",
+  "ops_unknown_organization": "organisation inconnue",
+  "ops_reading": "Lecture exceptionnelle",
+  "ops_reading_intro": "Lire un document émis d'une organisation, pour un motif. Chaque lecture est journalisée : qui, quand, quel document, pourquoi.",
+  "ops_organization": "Organisation (org_…)",
+  "ops_number": "Numéro du document",
+  "ops_reason": "Motif",
+  "ops_read": "Lire le document",
+  "ops_journal": "Journal des lectures",
+  "ops_journal_empty": "Aucune lecture pour l’instant."
 }

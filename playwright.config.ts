@@ -10,6 +10,8 @@ if (existsSync(localEnv)) process.loadEnvFile(localEnv);
 
 export const PORT = 3401;
 export const SESSION_SECRET = 'e2e-session-secret-of-at-least-32-characters';
+/** Kete's organization in the e2e: its owners with a second factor are operators. */
+export const OPERATORS = 'org_e2e_kete_operators';
 
 const required = [
   'FIRMO_TEST_APP_URL',
@@ -43,6 +45,7 @@ export default defineConfig({
       FIRMO_CLIENT_SECRET: 'e2e',
       FIRMO_SESSION_SECRET: SESSION_SECRET,
       FIRMO_WORKER: 'off',
+      KETE_OPERATORS_ORGANIZATION_ID: OPERATORS,
       FIRMO_WHATSAPP_NUMBER: '22890000000',
       FIRMO_STORAGE_ENDPOINT: process.env.FIRMO_TEST_STORAGE_ENDPOINT ?? '',
       FIRMO_STORAGE_REGION: process.env.FIRMO_TEST_STORAGE_REGION ?? '',

@@ -13,7 +13,8 @@ export function manifest(): Manifest {
     name: 'Firmo',
     version: VERSION,
     environment: env.environment,
-    events: [],
+    // Spec 008: what Kete Cockpit hears from Firmo (src/platform/events.ts).
+    events: ['document.issued', 'document.shared', 'ai.usage'],
   });
 }
 

@@ -31,6 +31,10 @@ export const env = {
   get sessionSecret(): string {
     return required('FIRMO_SESSION_SECRET');
   },
+  /** Kete's own organization at the Compte Kete: its owners and admins run Firmo (spec 008). */
+  get operatorsOrganizationId(): string | null {
+    return process.env.KETE_OPERATORS_ORGANIZATION_ID || null;
+  },
   get environment(): 'development' | 'preview' | 'staging' | 'production' {
     const value = process.env.KETE_ENVIRONMENT;
     return value === 'production' || value === 'staging' || value === 'preview'

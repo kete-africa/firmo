@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { DocumentError, type Documents } from '@/features/documents';
 import type { Identity, SenderProof } from '@/features/identity';
 import * as m from '@/paraglide/messages.js';
+import type { Transaction } from '@/platform/db';
 import { inOrganization } from '@/platform/tenancy';
 import {
   EvidenceError,
@@ -26,6 +27,7 @@ import type {
   OutboundAction,
   ToolCall,
   TurnUsage,
+  UsageEvents,
 } from './ports';
 import { draftForModel, summaryForPerson, type ChatLocale } from './summary';
 import {
@@ -47,6 +49,8 @@ export interface ConversationDeps {
   channels: Partial<Record<InboundMessage['channel'], MessagingChannel>>;
   identity: Identity;
   documents: Documents;
+  /** Kete Cockpit's events; without them, nothing is announced. */
+  events?: UsageEvents;
   locale?: ChatLocale;
 }
 
@@ -81,6 +85,18 @@ export function createConversation(deps: ConversationDeps) {
       if (item.kind === 'text') await channel.sendText(to, item.text, item.actions);
       else await channel.sendDocument(to, item.pdf, item.filename, item.caption);
     }
+  }
+
+  /** What the model cost this turn: kept for the document, and announced to Kete Cockpit. */
+  async function costOf(
+    tx: Transaction,
+    organizationId: string,
+    channel: InboundMessage['channel'],
+    documentId: number | null,
+    usage: TurnUsage[],
+  ) {
+    const total = await recordUsage(tx, { organizationId, channel, documentId, usage });
+    if (total) await deps.events?.aiUsage(tx, { organizationId, ...total });
   }
 
   /** The text of the turn: the message's words, or what was heard or read in its media. */
@@ -164,12 +180,7 @@ export function createConversation(deps: ConversationDeps) {
       const text = await textOf(message, channel, usage);
       if (!text) {
         await inOrganization(actor.organizationId, (tx) =>
-          recordUsage(tx, {
-            organizationId: actor.organizationId,
-            channel: message.channel,
-            documentId: turn.workedOn(),
-            usage,
-          }),
+          costOf(tx, actor.organizationId, message.channel, turn.workedOn(), usage),
         );
         await channel.sendText(to, m.chat_unsupported({}, { locale }));
         return { organizationId: actor.organizationId, usage };
@@ -203,12 +214,7 @@ export function createConversation(deps: ConversationDeps) {
       }
       await inOrganization(actor.organizationId, async (tx) => {
         await saveConversation(tx, turn.state);
-        await recordUsage(tx, {
-          organizationId: actor.organizationId,
-          channel: message.channel,
-          documentId: turn.workedOn(),
-          usage,
-        });
+        await costOf(tx, actor.organizationId, message.channel, turn.workedOn(), usage);
       });
       await deliver(channel, to, turn.outbox);
       return { organizationId: actor.organizationId, usage };

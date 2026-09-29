@@ -1,3 +1,4 @@
+import { outboxRelay } from './events';
 import { drain } from './inbox';
 import { services } from './services';
 
@@ -24,8 +25,13 @@ async function tick(): Promise<void> {
 export function startWorker(
   intervalMs = Number(process.env.FIRMO_WORKER_INTERVAL_MS ?? 3000),
 ): void {
-  timer ??= setInterval(() => void tick(), intervalMs);
+  if (timer) return;
+  timer = setInterval(() => void tick(), intervalMs);
   timer.unref();
+  // Firmo's events to Kete Cockpit, once Firmo is registered there (spec 008).
+  outboxRelay()?.start(5000, (error) =>
+    console.warn(`[outbox] ${error instanceof Error ? error.name : 'failed'}`),
+  );
 }
 
 export function wakeWorker(): void {
