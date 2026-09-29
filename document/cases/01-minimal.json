@@ -1,0 +1,28 @@
+{
+  "id": "01-minimal",
+  "type": "DEVIS",
+  "number": "DEV-2026-001",
+  "date": "08.08.2026",
+  "issuer": {
+    "mark": "KS",
+    "name": "KOFFI SERVICES",
+    "trade": "Plomberie et dépannage",
+    "color": "#17633D",
+    "phone": "+228 90 00 00 00"
+  },
+  "client": {"name": "Mme Afi"},
+  "object": "Remplacement d'un robinet extérieur",
+  "validity_days": 15,
+  "sections": [
+    {
+      "title": null,
+      "show_subtotal": false,
+      "lines": [
+        {"label": "Fourniture et remplacement du robinet", "flat_amount": 35000}
+      ]
+    }
+  ],
+  "adjustments": [],
+  "summary": "Fourniture et pose comprises.",
+  "expected": {"items_total": 35000, "grand_total": 35000}
+}

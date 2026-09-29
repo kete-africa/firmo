@@ -1,0 +1,14 @@
+{
+  "version": "firmo-document-v4",
+  "files": {
+    "assets/solvia.svg": "5d712db99bef744a5d6e9eecbe63a7c202076fbacd3ce5bf092d7bae3615cf34",
+    "fonts/InterTight-400.ttf": "89202252a47cae68c2b6f89ee9b20df8725ac21d4e9f09e5a6f12b2f408f12c9",
+    "fonts/InterTight-500.ttf": "43a9d97ad00edc2d02dabc0013d25c5347f3540f6209e099dc195b0ec7be0f18",
+    "fonts/InterTight-600.ttf": "b6fdc3d2c39c3a92cd9548e929e88912f869311a103e77515a9fc5f31e846ea7",
+    "fonts/InterTight-700.ttf": "fc6dea16e1d4216ef44003b2b10ace194c8eb1a85bdbe01738ef27753b223d4e",
+    "fonts/JetBrainsMono-400.ttf": "023f3ced8705c1b50497ac835ae0bd7f43081faab1e0142eeea0a9b2c0e480be",
+    "fonts/JetBrainsMono-600.ttf": "8de633b8acc660f87186ac0aa08159e0883c41f42eed4c91c359814f69710706",
+    "fonts/JetBrainsMono-700.ttf": "90e809a4059a2760661817d4668a8d7a87f5c386930c97bb2f0c9495be3bd52a",
+    "template.typ": "f804425872a3e95ce98a61688bc8a464be5df0f136d41202f523494ac9dbda9a"
+  }
+}

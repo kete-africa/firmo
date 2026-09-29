@@ -1,0 +1,24 @@
+{
+  "id": "08-conversion-facture",
+  "type": "FACTURE",
+  "number": "FAC-2026-016",
+  "date": "22.08.2026",
+  "issuer": {"mark": "AK", "name": "ATELIER KODJO", "trade": "Chaudronnerie - Soudure", "color": "#A8391F", "phone": "+228 90 00 00 00"},
+  "client": {"name": "Mairie d'Agoè"},
+  "object": "Supports pour 60 modules",
+  "origin": {"label": "Issu du devis", "number": "DEV-2026-041"},
+  "total_label": "NET À PAYER",
+  "signature_label": "RÉCEPTION DU DOCUMENT",
+  "signature_hint": "Date, nom et signature du client",
+  "sections": [{"title": "Fournitures", "show_subtotal": true, "lines": [
+    {"label": "Barre tube rectangulaire de 80 x 40", "quantity": 45, "unit": "barre", "unit_price": 17000},
+    {"label": "Barre fer cornière de 50 x 5", "quantity": 8, "unit": "barre", "unit_price": 14000},
+    {"label": "Boîte de peinture aluminium", "quantity": 2, "unit": "boîte", "unit_price": 12000},
+    {"label": "Diluant", "quantity": 10, "unit": "litre", "unit_price": 1200},
+    {"label": "Cheville métallique", "quantity": 60, "unit": "pièce", "unit_price": 500}
+  ]}],
+  "adjustments": [{"label": "Main-d'œuvre", "mode": "fixed", "value": 160000}],
+  "summary": "Facturation conforme au devis accepté.",
+  "conditions": ["Référence de règlement : FAC-2026-016."],
+  "expected": {"items_total": 943000, "adjustments_total": 160000, "grand_total": 1103000}
+}

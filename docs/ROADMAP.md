@@ -39,7 +39,7 @@ flowchart LR
 
 ---
 
-## Phase 0 — Foundation · `specs/001-foundation`
+## Phase 0 — Foundation · `specs/001-foundation` · _closed on the CI of pull request #1_
 
 ### Objective
 
@@ -61,7 +61,7 @@ A repository an agent can work in safely, and an app that describes itself.
 
 ---
 
-## Phase 1 — The document · `specs/002-documents`
+## Phase 1 — The document · `specs/002-documents` · _delivered_
 
 ### Objective
 

@@ -1,0 +1,24 @@
+{
+  "id": "09-facture-directe",
+  "type": "FACTURE",
+  "number": "FAC-2026-017",
+  "date": "08.08.2026",
+  "issuer": {"mark": "NF", "name": "NANA FROID", "trade": "Climatisation et froid", "color": "#176B72", "phone": "+228 99 30 20 10"},
+  "client": {"name": "Restaurant Le Patio"},
+  "object": "Remise en service de la chambre froide",
+  "total_label": "TOTAL FACTURÉ",
+  "signature_label": "FACTURE ACQUITTÉE",
+  "signature_hint": "Règlement intégral reçu le 08.08.2026",
+  "sections": [{"title": null, "show_subtotal": false, "lines": [
+    {"label": "Compresseur frigorifique", "quantity": 2, "unit": "pièce", "unit_price": 125000},
+    {"label": "Pose, charge et essais", "quantity": 1, "unit": "forfait", "unit_price": 75000}
+  ]}],
+  "adjustments": [],
+  "payments": [
+    {"amount": 200000, "method": "TMoney", "date": "08.08.2026"},
+    {"amount": 125000, "method": "Espèces", "date": "08.08.2026"}
+  ],
+  "summary": "Pièces, pose et essais de fonctionnement compris.",
+  "conditions": ["Facture acquittée."],
+  "expected": {"items_total": 325000, "grand_total": 325000, "paid_total": 325000, "balance": 0}
+}

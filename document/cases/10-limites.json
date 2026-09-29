@@ -1,0 +1,21 @@
+{
+  "id": "10-limites",
+  "type": "DEVIS",
+  "number": "DEV/LOME/2026/000001",
+  "date": "08.08.2026",
+  "issuer": {"mark": "GT", "name": "GRANDS TRAVAUX TOGO", "trade": "Ouvrages industriels", "color": "#242424", "phone": "+228 22 50 60 70"},
+  "client": {"name": "Consortium Industriel de la Kara", "address": "Zone industrielle, Kara"},
+  "object": "Fourniture d'équipements pour extension d'usine",
+  "site": "Kara",
+  "delivery": "Sur planning validé",
+  "validity_days": 45,
+  "sections": [{"title": "Équipements", "show_subtotal": true, "lines": [
+    {"label": "Profilé industriel traité grande longueur", "description": "Conditionnement et protection anticorrosion inclus", "quantity": 1250, "unit": "unité", "unit_price": 87500},
+    {"label": "Câble haute résistance", "quantity": 2.5, "unit": "km", "unit_price": 12000},
+    {"label": "Contrôle qualité et certification", "quantity": 1, "unit": "forfait", "unit_price": 990000}
+  ]}],
+  "adjustments": [{"label": "Remise négociée", "mode": "percent", "value": -7, "base": "items_total"}],
+  "summary": "Fourniture, contrôle et dossier de conformité compris.",
+  "conditions": ["Montants arrondis au franc CFA.", "La remise s'applique au montant total des équipements."],
+  "expected": {"items_total": 110395000, "adjustments_total": -7727650, "grand_total": 102667350}
+}

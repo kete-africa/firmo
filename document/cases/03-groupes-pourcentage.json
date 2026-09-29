@@ -1,0 +1,53 @@
+{
+  "id": "03-groupes-pourcentage",
+  "type": "DEVIS",
+  "number": "DEV-2026-042",
+  "date": "08.08.2026",
+  "issuer": {
+    "mark": "AK",
+    "name": "ATELIER KODJO",
+    "trade": "Chaudronnerie - Soudure",
+    "color": "#A8391F",
+    "phone": "+228 90 00 00 00"
+  },
+  "client": {"name": "Société Bati Plus"},
+  "object": "Portail et garde-corps d'une villa",
+  "site": "Adidogomé, Lomé",
+  "delivery": "21 jours après acompte",
+  "validity_days": 30,
+  "sections": [
+    {
+      "title": "Portail coulissant",
+      "show_subtotal": true,
+      "lines": [
+        {"label": "Tube rectangulaire 80 x 40", "quantity": 12, "unit": "barre", "unit_price": 18000},
+        {"label": "Tôle noire 20/10", "quantity": 4, "unit": "feuille", "unit_price": 32000}
+      ]
+    },
+    {
+      "title": "Garde-corps",
+      "show_subtotal": true,
+      "lines": [
+        {"label": "Tube carré 40 x 40", "quantity": 8, "unit": "barre", "unit_price": 15000},
+        {"label": "Peinture antirouille", "quantity": 2, "unit": "boîte", "unit_price": 18000}
+      ]
+    }
+  ],
+  "adjustments": [
+    {"label": "Main-d'œuvre", "mode": "percent", "value": 25, "base": "items_total"},
+    {"label": "Transport et pose", "mode": "fixed", "value": 30000}
+  ],
+  "deposit_percent": 30,
+  "summary": "Fabrication, transport et pose compris.",
+  "conditions": [
+    "Acompte de 30 % à la commande.",
+    "Garantie de 24 mois sur les soudures et finitions."
+  ],
+  "expected": {
+    "items_total": 500000,
+    "adjustments_total": 155000,
+    "grand_total": 655000,
+    "deposit": 196500,
+    "balance": 458500
+  }
+}

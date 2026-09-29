@@ -1,0 +1,47 @@
+{
+  "id": "04-btp",
+  "type": "DEVIS",
+  "number": "DEV-2026-118",
+  "date": "08.08.2026",
+  "issuer": {
+    "mark": "EB",
+    "name": "ÉTABLISSEMENTS BÂTIR",
+    "trade": "Construction et génie civil",
+    "color": "#2B5C88",
+    "phone": "+228 91 24 36 48"
+  },
+  "client": {"name": "M. Mensah Kossi", "address": "Lomé, Togo"},
+  "object": "Gros œuvre d'une villa R+1",
+  "site": "Légbassito",
+  "delivery": "14 semaines",
+  "validity_days": 21,
+  "sections": [
+    {
+      "title": "Terrassement et fondations",
+      "show_subtotal": true,
+      "lines": [
+        {"label": "Fouilles en rigoles", "description": "Décapage, implantation et évacuation comprises", "quantity": 120, "unit": "m³", "unit_price": 6500},
+        {"label": "Béton armé de fondation", "quantity": 45, "unit": "m³", "unit_price": 75000}
+      ]
+    },
+    {
+      "title": "Structure",
+      "show_subtotal": true,
+      "lines": [
+        {"label": "Ferraillage poteaux et poutres", "flat_amount": 1250000},
+        {"label": "Coffrage traditionnel", "quantity": 180, "unit": "m²", "unit_price": 8500}
+      ]
+    }
+  ],
+  "adjustments": [
+    {"label": "Installation de chantier", "mode": "fixed", "value": 250000}
+  ],
+  "deposit_percent": 40,
+  "summary": "Main-d'œuvre, matériel et encadrement technique compris.",
+  "conditions": [
+    "Démarrage après versement de l'acompte et remise du terrain.",
+    "Les travaux supplémentaires feront l'objet d'un avenant validé.",
+    "Planning ajusté en cas d'intempéries ou d'indisponibilité du site."
+  ],
+  "expected": {"items_total": 6935000, "adjustments_total": 250000, "grand_total": 7185000, "deposit": 2874000, "balance": 4311000}
+}

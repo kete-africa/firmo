@@ -1,3 +1,5 @@
 * text=auto eol=lf
 *.png binary
 *.woff2 binary
+# The document template bundle is checked byte for byte against its manifest.
+document/templates/** -text

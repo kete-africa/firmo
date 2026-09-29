@@ -1,0 +1,66 @@
+{
+  "id": "06-long-multipage",
+  "type": "DEVIS",
+  "number": "DEV-2026-119",
+  "date": "08.08.2026",
+  "issuer": {"mark": "EB", "name": "ÉTABLISSEMENTS BÂTIR", "trade": "Construction et génie civil", "color": "#2B5C88", "phone": "+228 91 24 36 48"},
+  "client": {"name": "SCI LES FLAMBOYANTS", "address": "Agoè-Nyivé, Togo"},
+  "object": "Second œuvre complet d'un immeuble de bureaux",
+  "site": "Agoè-Nyivé",
+  "delivery": "20 semaines",
+  "validity_days": 30,
+  "sections": [
+    {"title": "Préparation", "show_subtotal": true, "lines": [
+      {"label": "Nettoyage du chantier", "quantity": 120, "unit": "m²", "unit_price": 3500},
+      {"label": "Dépose des ouvrages existants", "quantity": 80, "unit": "m²", "unit_price": 4200},
+      {"label": "Reprises de maçonnerie", "quantity": 45, "unit": "m²", "unit_price": 6500},
+      {"label": "Percements techniques", "quantity": 12, "unit": "unité", "unit_price": 18000},
+      {"label": "Saignées et rebouchage", "quantity": 30, "unit": "ml", "unit_price": 9500},
+      {"label": "Protection des circulations", "quantity": 10, "unit": "zone", "unit_price": 25000},
+      {"label": "Échafaudages mobiles", "quantity": 8, "unit": "semaine", "unit_price": 32000},
+      {"label": "Évacuation des gravats", "quantity": 50, "unit": "sac", "unit_price": 2800},
+      {"label": "Implantation des cloisons", "quantity": 24, "unit": "pièce", "unit_price": 12500},
+      {"label": "Installation provisoire", "quantity": 1, "unit": "forfait", "unit_price": 180000}
+    ]},
+    {"title": "Électricité", "show_subtotal": true, "lines": [
+      {"label": "Gaine ICTA", "quantity": 400, "unit": "ml", "unit_price": 1200},
+      {"label": "Câble électrique 2,5 mm²", "quantity": 250, "unit": "ml", "unit_price": 1500},
+      {"label": "Prise de courant", "quantity": 80, "unit": "unité", "unit_price": 6500},
+      {"label": "Interrupteur double", "quantity": 40, "unit": "unité", "unit_price": 9000},
+      {"label": "Luminaire LED", "quantity": 16, "unit": "unité", "unit_price": 22000},
+      {"label": "Bloc de secours", "quantity": 12, "unit": "unité", "unit_price": 28000},
+      {"label": "Tableau divisionnaire", "quantity": 8, "unit": "unité", "unit_price": 45000},
+      {"label": "Point réseau RJ45", "quantity": 60, "unit": "unité", "unit_price": 7500},
+      {"label": "Mise à la terre", "quantity": 25, "unit": "point", "unit_price": 18000},
+      {"label": "Essais et mise en service", "quantity": 1, "unit": "forfait", "unit_price": 250000}
+    ]},
+    {"title": "Plomberie", "show_subtotal": true, "lines": [
+      {"label": "Tube PVC pression", "quantity": 500, "unit": "ml", "unit_price": 850},
+      {"label": "Tube multicouche", "quantity": 150, "unit": "ml", "unit_price": 2200},
+      {"label": "Évacuation PVC 100", "quantity": 60, "unit": "ml", "unit_price": 4800},
+      {"label": "Vanne d'arrêt", "quantity": 40, "unit": "unité", "unit_price": 6500},
+      {"label": "Robinet de puisage", "quantity": 20, "unit": "unité", "unit_price": 12000},
+      {"label": "Lavabo complet", "quantity": 15, "unit": "unité", "unit_price": 18000},
+      {"label": "WC complet", "quantity": 10, "unit": "unité", "unit_price": 25000},
+      {"label": "Évier inox", "quantity": 8, "unit": "unité", "unit_price": 35000},
+      {"label": "Surpresseur", "quantity": 6, "unit": "unité", "unit_price": 48000},
+      {"label": "Essais d'étanchéité", "quantity": 1, "unit": "forfait", "unit_price": 320000}
+    ]},
+    {"title": "Finitions", "show_subtotal": true, "lines": [
+      {"label": "Enduit intérieur", "quantity": 30, "unit": "m²", "unit_price": 9500},
+      {"label": "Peinture acrylique", "quantity": 18, "unit": "seau", "unit_price": 14500},
+      {"label": "Faux plafond", "quantity": 12, "unit": "m²", "unit_price": 22000},
+      {"label": "Menuiserie intérieure", "quantity": 8, "unit": "porte", "unit_price": 35000},
+      {"label": "Vitrage de séparation", "quantity": 5, "unit": "panneau", "unit_price": 48000},
+      {"label": "Plinthes", "quantity": 24, "unit": "ml", "unit_price": 7500},
+      {"label": "Signalétique", "quantity": 40, "unit": "unité", "unit_price": 3200},
+      {"label": "Nettoyage de livraison", "quantity": 60, "unit": "heure", "unit_price": 1800},
+      {"label": "Dossier des ouvrages exécutés", "quantity": 1, "unit": "forfait", "unit_price": 450000},
+      {"label": "Réception et levée des réserves", "quantity": 1, "unit": "forfait", "unit_price": 275000}
+    ]}
+  ],
+  "adjustments": [{"label": "Transport et logistique", "mode": "fixed", "value": 350000}],
+  "summary": "Fournitures, pose, essais et réception compris selon les plans transmis.",
+  "conditions": ["Prix révisable si le démarrage intervient après la période de validité.", "Les alimentations principales hors emprise sont exclues.", "Les ouvrages cachés feront l'objet d'une réception intermédiaire."],
+  "expected": {"items_total": 12030500, "adjustments_total": 350000, "grand_total": 12380500, "min_pages": 2}
+}

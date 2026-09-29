@@ -1,0 +1,45 @@
+{
+  "id": "05-entreprise-formelle",
+  "type": "DEVIS",
+  "number": "DV-26-0087",
+  "date": "08.08.2026",
+  "issuer": {
+    "mark": "SV",
+    "logo": "assets/solvia.svg",
+    "name": "SOLVIA CONSEIL SARL",
+    "trade": "Conseil, intégration et formation",
+    "color": "#173B4D",
+    "phone": "+228 22 21 40 80",
+    "email": "contact@solvia.tg",
+    "tax_id": "1001789234",
+    "rccm": "TG-LOM 2024 B 1842"
+  },
+  "client": {
+    "name": "NOVA DISTRIBUTION SA",
+    "address": "Boulevard du 13 janvier, Lomé",
+    "tax_id": "1000815672"
+  },
+  "object": "Déploiement d'un système de suivi commercial",
+  "delivery": "6 semaines",
+  "validity_days": 30,
+  "sections": [
+    {
+      "title": "Mission",
+      "show_subtotal": true,
+      "lines": [
+        {"label": "Audit et cadrage fonctionnel", "quantity": 1, "unit": "forfait", "unit_price": 850000},
+        {"label": "Configuration, migration et formation", "quantity": 1, "unit": "forfait", "unit_price": 1250000}
+      ]
+    }
+  ],
+  "adjustments": [
+    {"label": "Remise commerciale", "mode": "percent", "value": -5, "base": "items_total"}
+  ],
+  "tax_rate": 18,
+  "summary": "Cadrage, mise en œuvre et accompagnement des équipes compris.",
+  "conditions": [
+    "50 % à la commande, 30 % à la recette et 20 % à la mise en production.",
+    "Le présent devis est exprimé hors retenues fiscales éventuelles."
+  ],
+  "expected": {"items_total": 2100000, "adjustments_total": -105000, "total_before_tax": 1995000, "tax_amount": 359100, "grand_total": 2354100}
+}

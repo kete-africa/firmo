@@ -27,8 +27,9 @@ flowchart LR
   Worker -->|signed events| KC[Kete Cockpit]
 ```
 
-The phases that bring each part are in `ROADMAP.md`. Phase 0 delivers the web role with
-`/health`, `/.well-known/kete` and the outbox.
+The phases that bring each part are in `ROADMAP.md`. Delivered: the web role with `/health`,
+`/.well-known/kete` and the outbox (phase 0); the document — model, calculations, numbering,
+issuance, PDF (phase 1, `src/features/documents/README.md`).
 
 ## Layers
 
