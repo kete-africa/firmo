@@ -256,7 +256,10 @@ describe('the guards', () => {
       documents,
     }).handle(text(number, sale));
     expect(JSON.parse(results[0]?.[0] ?? '{}')).toMatchObject({ ok: false });
-    expect(sent.map((s) => s.text)).toEqual(['Quel est le prix de la tôle ?']);
+    // No summary: the draft did not change. Then, at first use, what is kept and what is not.
+    expect(sent[0]?.text).toBe('Quel est le prix de la tôle ?');
+    expect(sent[1]?.text).toContain('ne sont pas conservés');
+    expect(sent).toHaveLength(2);
   });
 
   it('never lets the reply state an amount the code did not compute', async () => {

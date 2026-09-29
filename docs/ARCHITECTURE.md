@@ -33,7 +33,8 @@ issuance, PDF (phase 1, `src/features/documents/README.md`); identity — a send
 Kete person and organization, the web space opens through a one-time link (phase 2,
 `src/features/identity/README.md`); the conversation — a bounded agent with guarded tools, the
 inbox and its worker, WhatsApp, Telegram and OpenAI adapters (phase 3,
-`src/features/conversation/README.md`, decisions 0001 and 0002).
+`src/features/conversation/README.md`, decisions 0001 and 0002); the client space — documents,
+editing, issuance, share links, presentation (phase 4, `src/features/space/README.md`).
 
 ## Layers
 

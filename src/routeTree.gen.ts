@@ -17,8 +17,16 @@ import { Route as DotwellKnownKeteRouteImport } from './routes/[.]well-known/ket
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthConnexionRouteImport } from './routes/auth/connexion'
 import { Route as AuthSortieRouteImport } from './routes/auth/sortie'
+import { Route as DTokenRouteImport } from './routes/d/$token'
+import { Route as EspaceIndexRouteImport } from './routes/espace/index'
+import { Route as EspacePresentationRouteImport } from './routes/espace/presentation'
 import { Route as WebhooksTelegramRouteImport } from './routes/webhooks/telegram'
 import { Route as WebhooksWhatsappRouteImport } from './routes/webhooks/whatsapp'
+import { Route as ApiPresentationLogoRouteImport } from './routes/api/presentation/logo'
+import { Route as ApiPresentationPreviewRouteImport } from './routes/api/presentation/preview'
+import { Route as EspaceDocumentsIndexRouteImport } from './routes/espace/documents.index'
+import { Route as EspaceDocumentsIdRouteImport } from './routes/espace/documents.$id'
+import { Route as ApiDocumentsIdPdfRouteImport } from './routes/api/documents/$id/pdf'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -60,6 +68,21 @@ const AuthSortieRoute = AuthSortieRouteImport.update({
   path: '/auth/sortie',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DTokenRoute = DTokenRouteImport.update({
+  id: '/d/$token',
+  path: '/d/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EspaceIndexRoute = EspaceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => EspaceRoute,
+} as any)
+const EspacePresentationRoute = EspacePresentationRouteImport.update({
+  id: '/presentation',
+  path: '/presentation',
+  getParentRoute: () => EspaceRoute,
+} as any)
 const WebhooksTelegramRoute = WebhooksTelegramRouteImport.update({
   id: '/webhooks/telegram',
   path: '/webhooks/telegram',
@@ -70,43 +93,91 @@ const WebhooksWhatsappRoute = WebhooksWhatsappRouteImport.update({
   path: '/webhooks/whatsapp',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPresentationLogoRoute = ApiPresentationLogoRouteImport.update({
+  id: '/api/presentation/logo',
+  path: '/api/presentation/logo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPresentationPreviewRoute = ApiPresentationPreviewRouteImport.update({
+  id: '/api/presentation/preview',
+  path: '/api/presentation/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EspaceDocumentsIndexRoute = EspaceDocumentsIndexRouteImport.update({
+  id: '/documents/',
+  path: '/documents/',
+  getParentRoute: () => EspaceRoute,
+} as any)
+const EspaceDocumentsIdRoute = EspaceDocumentsIdRouteImport.update({
+  id: '/documents/$id',
+  path: '/documents/$id',
+  getParentRoute: () => EspaceRoute,
+} as any)
+const ApiDocumentsIdPdfRoute = ApiDocumentsIdPdfRouteImport.update({
+  id: '/api/documents/$id/pdf',
+  path: '/api/documents/$id/pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/espace': typeof EspaceRoute
+  '/espace': typeof EspaceRouteWithChildren
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
+  '/d/$token': typeof DTokenRoute
+  '/espace/presentation': typeof EspacePresentationRoute
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
+  '/espace/': typeof EspaceIndexRoute
+  '/api/presentation/logo': typeof ApiPresentationLogoRoute
+  '/api/presentation/preview': typeof ApiPresentationPreviewRoute
+  '/espace/documents/$id': typeof EspaceDocumentsIdRoute
+  '/espace/documents/': typeof EspaceDocumentsIndexRoute
+  '/api/documents/$id/pdf': typeof ApiDocumentsIdPdfRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/espace': typeof EspaceRoute
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
+  '/d/$token': typeof DTokenRoute
+  '/espace/presentation': typeof EspacePresentationRoute
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
+  '/espace': typeof EspaceIndexRoute
+  '/api/presentation/logo': typeof ApiPresentationLogoRoute
+  '/api/presentation/preview': typeof ApiPresentationPreviewRoute
+  '/espace/documents/$id': typeof EspaceDocumentsIdRoute
+  '/espace/documents': typeof EspaceDocumentsIndexRoute
+  '/api/documents/$id/pdf': typeof ApiDocumentsIdPdfRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/espace': typeof EspaceRoute
+  '/espace': typeof EspaceRouteWithChildren
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
+  '/d/$token': typeof DTokenRoute
+  '/espace/presentation': typeof EspacePresentationRoute
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
+  '/espace/': typeof EspaceIndexRoute
+  '/api/presentation/logo': typeof ApiPresentationLogoRoute
+  '/api/presentation/preview': typeof ApiPresentationPreviewRoute
+  '/espace/documents/$id': typeof EspaceDocumentsIdRoute
+  '/espace/documents/': typeof EspaceDocumentsIndexRoute
+  '/api/documents/$id/pdf': typeof ApiDocumentsIdPdfRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -119,20 +190,35 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
+    | '/d/$token'
+    | '/espace/presentation'
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
+    | '/espace/'
+    | '/api/presentation/logo'
+    | '/api/presentation/preview'
+    | '/espace/documents/$id'
+    | '/espace/documents/'
+    | '/api/documents/$id/pdf'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/espace'
     | '/health'
     | '/lien-expire'
     | '/.well-known/kete'
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
+    | '/d/$token'
+    | '/espace/presentation'
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
+    | '/espace'
+    | '/api/presentation/logo'
+    | '/api/presentation/preview'
+    | '/espace/documents/$id'
+    | '/espace/documents'
+    | '/api/documents/$id/pdf'
   id:
     | '__root__'
     | '/'
@@ -143,21 +229,33 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
+    | '/d/$token'
+    | '/espace/presentation'
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
+    | '/espace/'
+    | '/api/presentation/logo'
+    | '/api/presentation/preview'
+    | '/espace/documents/$id'
+    | '/espace/documents/'
+    | '/api/documents/$id/pdf'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  EspaceRoute: typeof EspaceRoute
+  EspaceRoute: typeof EspaceRouteWithChildren
   HealthRoute: typeof HealthRoute
   LienExpireRoute: typeof LienExpireRoute
   DotwellKnownKeteRoute: typeof DotwellKnownKeteRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthConnexionRoute: typeof AuthConnexionRoute
   AuthSortieRoute: typeof AuthSortieRoute
+  DTokenRoute: typeof DTokenRoute
   WebhooksTelegramRoute: typeof WebhooksTelegramRoute
   WebhooksWhatsappRoute: typeof WebhooksWhatsappRoute
+  ApiPresentationLogoRoute: typeof ApiPresentationLogoRoute
+  ApiPresentationPreviewRoute: typeof ApiPresentationPreviewRoute
+  ApiDocumentsIdPdfRoute: typeof ApiDocumentsIdPdfRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -218,6 +316,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSortieRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/d/$token': {
+      id: '/d/$token'
+      path: '/d/$token'
+      fullPath: '/d/$token'
+      preLoaderRoute: typeof DTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/espace/': {
+      id: '/espace/'
+      path: '/'
+      fullPath: '/espace/'
+      preLoaderRoute: typeof EspaceIndexRouteImport
+      parentRoute: typeof EspaceRoute
+    }
+    '/espace/presentation': {
+      id: '/espace/presentation'
+      path: '/presentation'
+      fullPath: '/espace/presentation'
+      preLoaderRoute: typeof EspacePresentationRouteImport
+      parentRoute: typeof EspaceRoute
+    }
     '/webhooks/telegram': {
       id: '/webhooks/telegram'
       path: '/webhooks/telegram'
@@ -232,20 +351,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WebhooksWhatsappRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/presentation/logo': {
+      id: '/api/presentation/logo'
+      path: '/api/presentation/logo'
+      fullPath: '/api/presentation/logo'
+      preLoaderRoute: typeof ApiPresentationLogoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/presentation/preview': {
+      id: '/api/presentation/preview'
+      path: '/api/presentation/preview'
+      fullPath: '/api/presentation/preview'
+      preLoaderRoute: typeof ApiPresentationPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/espace/documents/': {
+      id: '/espace/documents/'
+      path: '/documents'
+      fullPath: '/espace/documents/'
+      preLoaderRoute: typeof EspaceDocumentsIndexRouteImport
+      parentRoute: typeof EspaceRoute
+    }
+    '/espace/documents/$id': {
+      id: '/espace/documents/$id'
+      path: '/documents/$id'
+      fullPath: '/espace/documents/$id'
+      preLoaderRoute: typeof EspaceDocumentsIdRouteImport
+      parentRoute: typeof EspaceRoute
+    }
+    '/api/documents/$id/pdf': {
+      id: '/api/documents/$id/pdf'
+      path: '/api/documents/$id/pdf'
+      fullPath: '/api/documents/$id/pdf'
+      preLoaderRoute: typeof ApiDocumentsIdPdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
+interface EspaceRouteChildren {
+  EspacePresentationRoute: typeof EspacePresentationRoute
+  EspaceIndexRoute: typeof EspaceIndexRoute
+  EspaceDocumentsIdRoute: typeof EspaceDocumentsIdRoute
+  EspaceDocumentsIndexRoute: typeof EspaceDocumentsIndexRoute
+}
+
+const EspaceRouteChildren: EspaceRouteChildren = {
+  EspacePresentationRoute: EspacePresentationRoute,
+  EspaceIndexRoute: EspaceIndexRoute,
+  EspaceDocumentsIdRoute: EspaceDocumentsIdRoute,
+  EspaceDocumentsIndexRoute: EspaceDocumentsIndexRoute,
+}
+
+const EspaceRouteWithChildren =
+  EspaceRoute._addFileChildren(EspaceRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  EspaceRoute: EspaceRoute,
+  EspaceRoute: EspaceRouteWithChildren,
   HealthRoute: HealthRoute,
   LienExpireRoute: LienExpireRoute,
   DotwellKnownKeteRoute: DotwellKnownKeteRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthConnexionRoute: AuthConnexionRoute,
   AuthSortieRoute: AuthSortieRoute,
+  DTokenRoute: DTokenRoute,
   WebhooksTelegramRoute: WebhooksTelegramRoute,
   WebhooksWhatsappRoute: WebhooksWhatsappRoute,
+  ApiPresentationLogoRoute: ApiPresentationLogoRoute,
+  ApiPresentationPreviewRoute: ApiPresentationPreviewRoute,
+  ApiDocumentsIdPdfRoute: ApiDocumentsIdPdfRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

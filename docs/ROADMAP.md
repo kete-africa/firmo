@@ -137,7 +137,7 @@ A voice note, a photo or a text becomes a reading, then a draft, then an issued 
 
 ---
 
-## Phase 4 — Client space · `specs/005-client-space`
+## Phase 4 — Client space · `specs/005-client-space` · _delivered_
 
 ### Objective
 

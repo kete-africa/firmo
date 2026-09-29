@@ -31,8 +31,9 @@ export default tseslint.config(
               message: 'Import a package through its public entry point.',
             },
             {
-              group: ['@/features/*/*', '!@/features/*/index'],
-              message: 'Import a feature through its public entry point (index.ts).',
+              group: ['@/features/*/*', '!@/features/*/index', '!@/features/*/client'],
+              message:
+                'Import a feature through its public entry points (index.ts; client.ts in screens).',
             },
           ],
         },
