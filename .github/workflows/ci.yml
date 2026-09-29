@@ -21,7 +21,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Install (@kete-africa/* from GitHub Packages)
+        run: env "npm_config_//npm.pkg.github.com/:_authToken=$KETE_PACKAGES_TOKEN" pnpm install --frozen-lockfile
+        env:
+          KETE_PACKAGES_TOKEN: ${{ secrets.KETE_PACKAGES_TOKEN }}
       - name: Lint, types, formatting, catalogs
         run: pnpm check
       - name: Migrate the Neon "test" branch
@@ -41,7 +44,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build the image
-        run: docker build -t firmo:ci .
+        env:
+          KETE_PACKAGES_TOKEN: ${{ secrets.KETE_PACKAGES_TOKEN }}
+        run: docker build --secret id=KETE_PACKAGES_TOKEN,env=KETE_PACKAGES_TOKEN -t firmo:ci .
       - name: The image starts and reports healthy (Neon "test" branch)
         env:
           FIRMO_TEST_APP_URL: ${{ secrets.FIRMO_TEST_APP_URL }}

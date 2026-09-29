@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.10
 # Firmo — one image, two roles: the web server (default) and the worker (phase 3).
 # Vite builds; srvx serves SSR and static files; Typst composes the PDFs.
 
@@ -23,9 +24,10 @@ FROM node:22.14.0-bookworm-slim AS build
 WORKDIR /app
 # pnpm is installed explicitly: corepack signature checks have broken builds before.
 RUN npm install -g pnpm@11.25.0
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY vendor vendor
-RUN pnpm install --frozen-lockfile
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+# @kete-africa/* come from GitHub Packages: the read token is a build secret, handed to pnpm
+# through the environment for this step only — never written to a file or an image layer.
+RUN --mount=type=secret,id=KETE_PACKAGES_TOKEN,env=KETE_PACKAGES_TOKEN     env "npm_config_//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}" pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build && pnpm prune --prod
 

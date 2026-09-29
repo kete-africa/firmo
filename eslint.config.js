@@ -14,7 +14,6 @@ export default tseslint.config(
       '.specify/**',
       '.claude/**',
       'specs/**',
-      'vendor/**',
       'document/**',
     ],
   },

@@ -4,3 +4,8 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+
+# Kete's own packages are trusted as soon as kete-core's CI publishes them; every other package
+# keeps pnpm's minimum release age (supply-chain protection).
+minimumReleaseAgeExclude:
+  - '@kete-africa/*'

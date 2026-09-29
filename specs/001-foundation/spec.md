@@ -34,7 +34,7 @@ Kete Cockpit, or an operator, reads Firmo's health and self-description.
   visible string.
 - **FR-002**: Neon `kete-firmo` (`main`, `dev`, `test`), `firmo_owner` and `firmo_app`
   (NOBYPASSRLS, created in SQL), a `files` bucket per branch.
-- **FR-003**: `@kete/*` vendored from kete-core (decision 0005 there).
+- **FR-003**: `@kete/*` from GitHub Packages (`@kete-africa/*`, kete-core decision 0005).
 - **FR-004**: The `@kete/sdk` outbox, created with its RLS policy.
 - **FR-005**: One image with Typst inside, probing its own `/health`.
 

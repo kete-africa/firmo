@@ -48,7 +48,7 @@ A repository an agent can work in safely, and an app that describes itself.
 ### Scope
 
 - Constitution, context, Spec Kit, product decisions carried over (`docs/product/`).
-- TypeScript strict, lint, formatting, catalogs check, CI; `@kete/*` vendored (kete-core 0005).
+- TypeScript strict, lint, formatting, catalogs check, CI; `@kete/*` from GitHub Packages (kete-core 0005).
 - Neon project `kete-firmo` (`main`, `dev`, `test`), owner and application roles, Neon Object
   Storage bucket per branch.
 - The app: TanStack Start on `@kete/design`, French and English, `/health`, `/.well-known/kete`;

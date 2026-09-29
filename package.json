@@ -22,11 +22,11 @@
     "db:migrate": "tsx scripts/migrate.ts"
   },
   "dependencies": {
-    "@kete/auth": "file:vendor/kete/kete-auth-0.1.0.tgz",
-    "@kete/design": "file:vendor/kete/kete-design-0.1.0.tgz",
-    "@kete/files": "file:vendor/kete/kete-files-0.1.0.tgz",
-    "@kete/payments": "file:vendor/kete/kete-payments-0.1.0.tgz",
-    "@kete/sdk": "file:vendor/kete/kete-sdk-0.1.0.tgz",
+    "@kete/auth": "npm:@kete-africa/auth@^0.1.0",
+    "@kete/design": "npm:@kete-africa/design@^0.1.0",
+    "@kete/files": "npm:@kete-africa/files@^0.1.0",
+    "@kete/payments": "npm:@kete-africa/payments@^0.1.0",
+    "@kete/sdk": "npm:@kete-africa/sdk@^0.1.0",
     "@tanstack/react-router": "^1.170.40",
     "@tanstack/react-start": "^1.168.59",
     "decimal.js": "^10.6.0",

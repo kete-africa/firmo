@@ -54,5 +54,6 @@ No vendor name in the domain or application layers (constitution V).
 
 ## Kete
 
-- `@kete/*` come from kete-core as vendored tarballs (`vendor/kete/`, kete-core decision 0005).
+- `@kete/*` are `@kete-africa/*` published by kete-core on GitHub Packages (kete-core decision
+  0005), aliased in `package.json`; reading them needs `KETE_PACKAGES_TOKEN`.
 - The outbox (`kete_outbox`, from `@kete/sdk`) carries Firmo's events to Kete Cockpit.

@@ -12,6 +12,5 @@ specs/
 **/project.inlang/cache
 **/project.inlang/.meta.json
 **/project.inlang/README.md
-vendor/
 document/
 docs/product/
