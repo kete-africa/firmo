@@ -17,6 +17,8 @@ import { Route as DotwellKnownKeteRouteImport } from './routes/[.]well-known/ket
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthConnexionRouteImport } from './routes/auth/connexion'
 import { Route as AuthSortieRouteImport } from './routes/auth/sortie'
+import { Route as WebhooksTelegramRouteImport } from './routes/webhooks/telegram'
+import { Route as WebhooksWhatsappRouteImport } from './routes/webhooks/whatsapp'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +60,16 @@ const AuthSortieRoute = AuthSortieRouteImport.update({
   path: '/auth/sortie',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WebhooksTelegramRoute = WebhooksTelegramRouteImport.update({
+  id: '/webhooks/telegram',
+  path: '/webhooks/telegram',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WebhooksWhatsappRoute = WebhooksWhatsappRouteImport.update({
+  id: '/webhooks/whatsapp',
+  path: '/webhooks/whatsapp',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +80,8 @@ export interface FileRoutesByFullPath {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
+  '/webhooks/telegram': typeof WebhooksTelegramRoute
+  '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +92,8 @@ export interface FileRoutesByTo {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
+  '/webhooks/telegram': typeof WebhooksTelegramRoute
+  '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +105,8 @@ export interface FileRoutesById {
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
+  '/webhooks/telegram': typeof WebhooksTelegramRoute
+  '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +119,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
+    | '/webhooks/telegram'
+    | '/webhooks/whatsapp'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +131,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
+    | '/webhooks/telegram'
+    | '/webhooks/whatsapp'
   id:
     | '__root__'
     | '/'
@@ -121,6 +143,8 @@ export interface FileRouteTypes {
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
+    | '/webhooks/telegram'
+    | '/webhooks/whatsapp'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +156,8 @@ export interface RootRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthConnexionRoute: typeof AuthConnexionRoute
   AuthSortieRoute: typeof AuthSortieRoute
+  WebhooksTelegramRoute: typeof WebhooksTelegramRoute
+  WebhooksWhatsappRoute: typeof WebhooksWhatsappRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +218,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSortieRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/webhooks/telegram': {
+      id: '/webhooks/telegram'
+      path: '/webhooks/telegram'
+      fullPath: '/webhooks/telegram'
+      preLoaderRoute: typeof WebhooksTelegramRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/webhooks/whatsapp': {
+      id: '/webhooks/whatsapp'
+      path: '/webhooks/whatsapp'
+      fullPath: '/webhooks/whatsapp'
+      preLoaderRoute: typeof WebhooksWhatsappRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +244,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
   AuthConnexionRoute: AuthConnexionRoute,
   AuthSortieRoute: AuthSortieRoute,
+  WebhooksTelegramRoute: WebhooksTelegramRoute,
+  WebhooksWhatsappRoute: WebhooksWhatsappRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

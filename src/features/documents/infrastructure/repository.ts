@@ -160,6 +160,26 @@ export async function saveProfile(
       default_validity_days = excluded.default_validity_days, updated_at = now()`);
 }
 
+/** The name documents leave under; the rest of the profile is kept as it is. */
+export async function setIssuerName(
+  tx: Transaction,
+  organizationId: string,
+  name: string,
+): Promise<void> {
+  await tx.execute(sql`
+    insert into organization_profiles (organization_id, name) values (${organizationId}, ${name})
+    on conflict (organization_id) do update set name = excluded.name, updated_at = now()`);
+}
+
+/** The last issued document (any state after issuance), or null. */
+export async function latestIssuedId(tx: Transaction): Promise<number | null> {
+  const [row] = await rows<{ id: string }>(
+    tx,
+    sql`select id from documents where state <> 'draft' order by issued_at desc, id desc limit 1`,
+  );
+  return row ? Number(row.id) : null;
+}
+
 export async function setLogoKey(tx: Transaction, logoKey: string | null): Promise<boolean> {
   const result = await tx.execute(
     sql`update organization_profiles set logo_key = ${logoKey}, updated_at = now()`,

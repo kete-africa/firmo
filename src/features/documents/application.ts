@@ -149,6 +149,23 @@ export function createDocuments(deps: DocumentsDeps) {
       return inOrganization(actor.organizationId, (tx) => repo.loadProfile(tx));
     },
 
+    /** The only question before a first document: the name it leaves under. */
+    async setIssuerName(actor: Actor, name: string): Promise<void> {
+      const trimmed = name.trim();
+      if (!trimmed || trimmed.length > 200) throw new DocumentError('invalid_input', 422, 'name');
+      await inOrganization(actor.organizationId, (tx) =>
+        repo.setIssuerName(tx, actor.organizationId, trimmed),
+      );
+    },
+
+    /** The last issued document, or null. */
+    async latestIssued(actor: Actor) {
+      return inOrganization(actor.organizationId, async (tx) => {
+        const id = await repo.latestIssuedId(tx);
+        return id === null ? null : repo.loadDocument(tx, id);
+      });
+    },
+
     async createDraft(actor: Actor, input: DraftInput): Promise<number> {
       const draft = parse(draftInput, input);
       return inOrganization(actor.organizationId, async (tx) => {
