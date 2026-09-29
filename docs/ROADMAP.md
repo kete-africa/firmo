@@ -244,7 +244,7 @@ Kete operators run Firmo; Kete Cockpit sees it live.
 
 ---
 
-## Phase 7 — Staging · `specs/009-staging`
+## Phase 7 — Staging · `specs/009-staging` · _running; the author's gestures pending_
 
 ### Objective
 
@@ -252,8 +252,13 @@ Firmo runs on staging, with its real channels.
 
 ### Scope
 
-- Coolify application (web and worker), Neon `dev`, storage, the Telegram and WhatsApp webhooks,
-  the Compte Kete client and the Cockpit registration; `docs/OPERATIONS.md`.
+- Coolify application `firmo-staging` (web and worker in one process), Neon `dev` migrated,
+  storage, secrets at runtime only and the packages token as a build secret; `docs/OPERATIONS.md`.
+- The Compte Kete client (`kete:people`) and the operators' organization, set by kete-core's
+  `staging:operator` in the same gesture as the Cockpit's.
+- The Cockpit registration, the Firmo offer, and the Telegram and WhatsApp webhooks: the author's
+  gestures, listed in `docs/OPERATIONS.md` — the messaging channels still serve the previous
+  Firmo, and moving them is the author's call.
 
 ### Proof
 
