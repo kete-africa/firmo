@@ -86,7 +86,7 @@ Firmo composes an exact, immutable, professional document from structured lines.
 
 ---
 
-## Phase 2 — Identity · `specs/003-identity`
+## Phase 2 — Identity · `specs/003-identity` · _delivered_
 
 ### Dependencies
 

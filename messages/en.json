@@ -3,5 +3,10 @@
   "meta_title": "Firmo — your quotes from a voice note",
   "meta_description": "Send your sale as a voice note, a photo or a text; get a professional quote. Your prices, our presentation.",
   "home_title": "Firmo",
-  "home_promise": "Say your sale. Get a quote you are proud to send."
+  "home_promise": "Say your sale. Get a quote you are proud to send.",
+  "space_title_without_name": "Your Firmo space",
+  "space_signed_in_as": "Signed in as {name}.",
+  "space_sign_out": "Sign out",
+  "link_expired_title": "This link is no longer valid",
+  "link_expired_body": "It was already used or it expired. Write \"space\" to Firmo to get a new one."
 }
