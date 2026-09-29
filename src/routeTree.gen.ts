@@ -10,12 +10,22 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as HealthRouteImport } from './routes/health'
+import { Route as LienExpireRouteImport } from './routes/lien-expire'
 import { Route as DotwellKnownKeteRouteImport } from './routes/[.]well-known/kete'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as AuthConnexionRouteImport } from './routes/auth/connexion'
+import { Route as AuthSortieRouteImport } from './routes/auth/sortie'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EspaceRoute = EspaceRouteImport.update({
+  id: '/espace',
+  path: '/espace',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HealthRoute = HealthRouteImport.update({
@@ -23,40 +33,105 @@ const HealthRoute = HealthRouteImport.update({
   path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LienExpireRoute = LienExpireRouteImport.update({
+  id: '/lien-expire',
+  path: '/lien-expire',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DotwellKnownKeteRoute = DotwellKnownKeteRouteImport.update({
   id: '/.well-known/kete',
   path: '/.well-known/kete',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthConnexionRoute = AuthConnexionRouteImport.update({
+  id: '/auth/connexion',
+  path: '/auth/connexion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSortieRoute = AuthSortieRouteImport.update({
+  id: '/auth/sortie',
+  path: '/auth/sortie',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/espace': typeof EspaceRoute
   '/health': typeof HealthRoute
+  '/lien-expire': typeof LienExpireRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/auth/connexion': typeof AuthConnexionRoute
+  '/auth/sortie': typeof AuthSortieRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/espace': typeof EspaceRoute
   '/health': typeof HealthRoute
+  '/lien-expire': typeof LienExpireRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/auth/connexion': typeof AuthConnexionRoute
+  '/auth/sortie': typeof AuthSortieRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/espace': typeof EspaceRoute
   '/health': typeof HealthRoute
+  '/lien-expire': typeof LienExpireRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/auth/connexion': typeof AuthConnexionRoute
+  '/auth/sortie': typeof AuthSortieRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/health' | '/.well-known/kete'
+  fullPaths:
+    | '/'
+    | '/espace'
+    | '/health'
+    | '/lien-expire'
+    | '/.well-known/kete'
+    | '/auth/callback'
+    | '/auth/connexion'
+    | '/auth/sortie'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/health' | '/.well-known/kete'
-  id: '__root__' | '/' | '/health' | '/.well-known/kete'
+  to:
+    | '/'
+    | '/espace'
+    | '/health'
+    | '/lien-expire'
+    | '/.well-known/kete'
+    | '/auth/callback'
+    | '/auth/connexion'
+    | '/auth/sortie'
+  id:
+    | '__root__'
+    | '/'
+    | '/espace'
+    | '/health'
+    | '/lien-expire'
+    | '/.well-known/kete'
+    | '/auth/callback'
+    | '/auth/connexion'
+    | '/auth/sortie'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EspaceRoute: typeof EspaceRoute
   HealthRoute: typeof HealthRoute
+  LienExpireRoute: typeof LienExpireRoute
   DotwellKnownKeteRoute: typeof DotwellKnownKeteRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
+  AuthConnexionRoute: typeof AuthConnexionRoute
+  AuthSortieRoute: typeof AuthSortieRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +143,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/espace': {
+      id: '/espace'
+      path: '/espace'
+      fullPath: '/espace'
+      preLoaderRoute: typeof EspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/health': {
       id: '/health'
       path: '/health'
       fullPath: '/health'
       preLoaderRoute: typeof HealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lien-expire': {
+      id: '/lien-expire'
+      path: '/lien-expire'
+      fullPath: '/lien-expire'
+      preLoaderRoute: typeof LienExpireRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/kete': {
@@ -82,13 +171,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotwellKnownKeteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/connexion': {
+      id: '/auth/connexion'
+      path: '/auth/connexion'
+      fullPath: '/auth/connexion'
+      preLoaderRoute: typeof AuthConnexionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/sortie': {
+      id: '/auth/sortie'
+      path: '/auth/sortie'
+      fullPath: '/auth/sortie'
+      preLoaderRoute: typeof AuthSortieRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EspaceRoute: EspaceRoute,
   HealthRoute: HealthRoute,
+  LienExpireRoute: LienExpireRoute,
   DotwellKnownKeteRoute: DotwellKnownKeteRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
+  AuthConnexionRoute: AuthConnexionRoute,
+  AuthSortieRoute: AuthSortieRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

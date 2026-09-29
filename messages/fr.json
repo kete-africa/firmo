@@ -3,5 +3,10 @@
   "meta_title": "Firmo — vos devis à partir d'un vocal",
   "meta_description": "Envoyez votre vente en vocal, en photo ou en texte ; recevez un devis professionnel. Vos prix, notre présentation.",
   "home_title": "Firmo",
-  "home_promise": "Dites votre vente. Recevez un devis que vous êtes fier d'envoyer."
+  "home_promise": "Dites votre vente. Recevez un devis que vous êtes fier d'envoyer.",
+  "space_title_without_name": "Votre espace Firmo",
+  "space_signed_in_as": "Connecté en tant que {name}.",
+  "space_sign_out": "Se déconnecter",
+  "link_expired_title": "Ce lien n'est plus valable",
+  "link_expired_body": "Il a déjà servi ou il a expiré. Écrivez « espace » à Firmo pour en recevoir un nouveau."
 }

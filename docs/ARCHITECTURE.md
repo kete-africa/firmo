@@ -29,7 +29,9 @@ flowchart LR
 
 The phases that bring each part are in `ROADMAP.md`. Delivered: the web role with `/health`,
 `/.well-known/kete` and the outbox (phase 0); the document — model, calculations, numbering,
-issuance, PDF (phase 1, `src/features/documents/README.md`).
+issuance, PDF (phase 1, `src/features/documents/README.md`); identity — a sender is one Compte
+Kete person and organization, the web space opens through a one-time link (phase 2,
+`src/features/identity/README.md`).
 
 ## Layers
 
