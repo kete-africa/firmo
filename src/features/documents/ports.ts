@@ -1,3 +1,6 @@
+import type { Transaction } from '@/platform/db';
+import type { DocumentType } from './domain/types';
+
 /** Renders a document's template input to a PDF. The Typst adapter lives in src/platform. */
 export interface DocumentRenderer {
   readonly templateVersion: string;
@@ -57,4 +60,17 @@ export interface IssuedCount {
   total(): Promise<number>;
   /** Those issued since `date`, leaving out the organization's first `excludingFirst` ones. */
   since(date: Date, excludingFirst: number): Promise<number>;
+}
+
+/**
+ * What the documents announce to Kete Cockpit (spec 008), written in the business transaction:
+ * the change and its event commit together, or neither. Facts only — never a price, a client or
+ * a number.
+ */
+export interface DocumentEvents {
+  issued(
+    tx: Transaction,
+    fact: { organizationId: string; type: DocumentType; correction: boolean },
+  ): Promise<void>;
+  shared(tx: Transaction, fact: { organizationId: string; type: DocumentType }): Promise<void>;
 }

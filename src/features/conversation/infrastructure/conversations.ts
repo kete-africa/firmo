@@ -54,12 +54,18 @@ export async function recordUsage(
     documentId: number | null;
     usage: readonly TurnUsage[];
   },
-): Promise<void> {
-  if (input.usage.length === 0) return;
+): Promise<TurnUsage | null> {
+  if (input.usage.length === 0) return null;
   const sum = (key: keyof TurnUsage) => input.usage.reduce((total, u) => total + u[key], 0);
+  const total = {
+    modelCalls: sum('modelCalls'),
+    inputTokens: sum('inputTokens'),
+    outputTokens: sum('outputTokens'),
+  };
   await tx.execute(sql`
     insert into ai_usage
       (organization_id, channel, document_id, model_calls, input_tokens, output_tokens)
     values (${input.organizationId}, ${input.channel}, ${input.documentId},
-            ${sum('modelCalls')}, ${sum('inputTokens')}, ${sum('outputTokens')})`);
+            ${total.modelCalls}, ${total.inputTokens}, ${total.outputTokens})`);
+  return total;
 }

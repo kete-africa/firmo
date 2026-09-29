@@ -1,3 +1,5 @@
+import type { Transaction } from '@/platform/db';
+
 /**
  * The conversation's ports. Adapters (WhatsApp, Telegram, OpenAI) live in src/platform; no vendor
  * name crosses into this feature (constitution V).
@@ -79,4 +81,12 @@ export interface ConversationModel {
     request: { instructions: string; input: string; tools: ModelTool[]; safetyId: string },
     execute: (call: ToolCall) => Promise<string>,
   ): Promise<{ reply: string; usage: TurnUsage }>;
+}
+
+/** What a conversation announces to Kete Cockpit (spec 008): the model's cost — counters only. */
+export interface UsageEvents {
+  aiUsage(
+    tx: Transaction,
+    fact: { organizationId: string; modelCalls: number; inputTokens: number; outputTokens: number },
+  ): Promise<void>;
 }

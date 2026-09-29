@@ -28,6 +28,7 @@ export {
 } from './domain/types';
 export {
   RenderingError,
+  type DocumentEvents,
   type DocumentFiles,
   type DocumentRenderer,
   type IssuanceGate,

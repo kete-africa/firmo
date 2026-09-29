@@ -64,6 +64,13 @@
       "when": 1790700000008,
       "tag": "0008_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790700000009,
+      "tag": "0009_operations",
+      "breakpoints": true
     }
   ]
 }

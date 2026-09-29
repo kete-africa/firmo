@@ -30,7 +30,13 @@ import { confirms, SnapshotError } from './domain/snapshot';
 import { canConvert, canRevise, nextAnswers } from './domain/lifecycle';
 import type { DocumentState, DocumentType } from './domain/types';
 import * as repo from './infrastructure/repository';
-import type { DocumentFiles, DocumentRenderer, IssuanceGate, IssuedCount } from './ports';
+import type {
+  DocumentEvents,
+  DocumentFiles,
+  DocumentRenderer,
+  IssuanceGate,
+  IssuedCount,
+} from './ports';
 
 /**
  * The documents feature's use cases. Every one runs inside the actor's organization, which comes
@@ -45,6 +51,8 @@ export interface DocumentsDeps {
   files: DocumentFiles;
   /** Firmo's plans; without one (tests, tools), every issuance is allowed. */
   gate?: IssuanceGate;
+  /** Kete Cockpit's events; without them (tests, tools), nothing is announced. */
+  events?: DocumentEvents;
   now?: () => Date;
 }
 
@@ -387,6 +395,11 @@ export function createDocuments(deps: DocumentsDeps) {
           manualNumber: Boolean(manual),
         });
         if (counter) await repo.advanceCounter(tx, document.type, counter.year, counter.value);
+        await deps.events?.issued(tx, {
+          organizationId: actor.organizationId,
+          type: document.type,
+          correction: document.revision > 1,
+        });
         await repo.rememberItems(
           tx,
           actor.organizationId,
@@ -624,6 +637,10 @@ export function createDocuments(deps: DocumentsDeps) {
           throw new DocumentError('not_available', 409);
         }
         await repo.createShare(tx, actor.organizationId, id, hashToken(token));
+        await deps.events?.shared(tx, {
+          organizationId: actor.organizationId,
+          type: document.type,
+        });
       });
       return { token };
     },

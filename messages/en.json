@@ -222,5 +222,20 @@
   "plan_manage": "Manage my subscription",
   "plan_where_paid": "Payment happens in your Compte Kete, which gathers your Kete subscriptions.",
   "document_plan_required": "Your free documents are used: subscribe to issue this one. It stays a draft.",
-  "document_quota_reached": "You issued all the documents of your current period. This one stays a draft."
+  "document_quota_reached": "You issued all the documents of your current period. This one stays a draft.",
+  "ops_title": "Firmo operations",
+  "ops_refused": "This space is for Kete operators only.",
+  "ops_refused_two_factor": "Turn on two-factor authentication in your Compte Kete to enter here.",
+  "ops_incidents": "Failed messages",
+  "ops_no_incident": "No failed message.",
+  "ops_attempts": "{count} attempt(s)",
+  "ops_unknown_organization": "unknown organization",
+  "ops_reading": "Exceptional reading",
+  "ops_reading_intro": "Read an organization's issued document, for a reason. Every reading is journaled: who, when, which document, why.",
+  "ops_organization": "Organization (org_…)",
+  "ops_number": "Document number",
+  "ops_reason": "Reason",
+  "ops_read": "Read the document",
+  "ops_journal": "Reading journal",
+  "ops_journal_empty": "No reading yet."
 }

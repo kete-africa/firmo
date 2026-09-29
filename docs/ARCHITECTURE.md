@@ -37,7 +37,8 @@ inbox and its worker, WhatsApp, Telegram and OpenAI adapters (phase 3,
 editing, issuance, share links, presentation (phase 4, `src/features/space/README.md`); three
 document types, each with its own life (phase 4.1, `specs/006-document-types`); plans — offered
 documents, then the Compte Kete's Firmo offer, counted under an issuance lock, and the model's cost
-measured (phase 5, `src/features/plans/README.md`).
+measured (phase 5, `src/features/plans/README.md`); operations — Kete operators' space, the
+journal, and Firmo's events to Kete Cockpit (phase 6, `src/features/operations/README.md`).
 
 ## Layers
 

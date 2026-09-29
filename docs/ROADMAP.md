@@ -214,7 +214,7 @@ Firmo is paid through the Compte Kete, and never gives more than what was bought
 
 ---
 
-## Phase 6 — Operations and Kete · `specs/008-operations`
+## Phase 6 — Operations and Kete · `specs/008-operations` · _delivered_
 
 ### Objective
 
@@ -222,19 +222,25 @@ Kete operators run Firmo; Kete Cockpit sees it live.
 
 ### Scope
 
-- The operator space (Compte Kete operators, two factors): incidents (failed messages, replay),
-  exceptional reading of a conversation or document with a reason, journaled; audit;
-  configuration (free documents, quota, AI limits, link and retention durations).
-- Firmo's manifest events through the outbox (`document.issued`, `document.shared`,
-  `subscription` facts, AI cost), never a price or a name; registered in Kete Cockpit.
-- A Compte Kete payment reaches Firmo, which confirms it in the chat by itself (outbox; a template
-  outside WhatsApp's window) — until then, the confirmation is seen on return and at the next
-  message.
+- The operator space `/operations` (Kete's owners and admins with a second factor — the Cockpit's
+  rule): failed messages, sender masked, never a body; an exceptional reading of an issued
+  document with a reason, journaled in the transaction that finds it; the journal
+  (`src/features/operations/README.md`).
+- Firmo's manifest events through the outbox — `document.issued`, `document.shared`, `ai.usage` —
+  facts and counters only, never a price, a client or a number; the relay runs in the worker once
+  Firmo is registered in Kete Cockpit.
+- Left out, and why (`specs/008-operations`): replaying a failed message (its body is erased,
+  decision 0001), reading a conversation (same), configuration at runtime (constants until a
+  measured need), a Compte Kete payment confirmed in the chat by Firmo itself (it needs the
+  Compte Kete to deliver its events to Firmo — see "Later").
 
 ### Proof
 
-- `[agent]` A Compte Kete client is kept out of the operator space; every reading is journaled.
-- `[agent]` An issued document arrives in the Cockpit as a signed event.
+- `[agent]` A Compte Kete client is kept out of the operator space; every reading is journaled
+  (`tests/operations.test.ts`, e2e).
+- `[agent]` An issued document arrives at a receiver as a signed event, once
+  (`tests/operations.test.ts`, with `@kete/sdk`'s receiver).
+- `[human]` Firmo registered in the staging Cockpit, its events seen there (phase 7).
 
 ---
 
@@ -261,4 +267,6 @@ Firmo runs on staging, with its real channels.
 
 A field bench of real dictations (transcription measured on real workshops) · several numbers for
 one business (the son who helps) · automatic library of works · activity certificates and tender
-files · accounting export · recharges between periods.
+files · accounting export · recharges between periods · a Compte Kete payment confirmed in the
+chat by Firmo itself (the Compte Kete delivering its events to Firmo) · configuration of the plans
+and limits at runtime.

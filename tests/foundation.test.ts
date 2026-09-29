@@ -31,6 +31,10 @@ describe('the foundation', () => {
   });
 
   it('describes itself to Kete Cockpit', () => {
-    expect(manifest()).toMatchObject({ product: 'prd_firmo', name: 'Firmo', events: [] });
+    expect(manifest()).toMatchObject({
+      product: 'prd_firmo',
+      name: 'Firmo',
+      events: ['document.issued', 'document.shared', 'ai.usage'],
+    });
   });
 });
