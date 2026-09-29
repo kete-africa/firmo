@@ -221,6 +221,47 @@ describe('a document, from draft to issued', () => {
   });
 });
 
+describe('three types, three lives (spec 006)', () => {
+  async function issued(type: DraftInput['type'], subject: string) {
+    const id = await documents.createDraft(A, { ...portal, type, subject });
+    const { sha256 } = await documents.preview(A, id);
+    await documents.issue(A, id, { sha256 });
+    return id;
+  }
+
+  it('a quote left without answer can still be accepted, then converted', async () => {
+    const id = await issued('quote', 'Sans réponse');
+    await documents.answer(A, id, 'unanswered');
+    expect(await codeOf(documents.answer(A, id, 'unanswered'))).toBe('not_available');
+    await documents.answer(A, id, 'accepted');
+    expect((await documents.get(A, id)).state).toBe('accepted');
+    expect(await codeOf(documents.convert(A, id, 'proforma'))).toBe('no error');
+  });
+
+  it('a refused quote is neither converted nor answered again, but may be revised', async () => {
+    const id = await issued('quote', 'Refusé');
+    await documents.answer(A, id, 'refused');
+    expect(await codeOf(documents.convert(A, id, 'invoice'))).toBe('not_available');
+    expect(await codeOf(documents.answer(A, id, 'accepted'))).toBe('not_available');
+    expect(await codeOf(documents.revise(A, id))).toBe('no error');
+  });
+
+  it('an invoice is never accepted nor revised, in the code and in the database', async () => {
+    const id = await issued('invoice', 'Facture directe');
+    expect(await codeOf(documents.answer(A, id, 'accepted'))).toBe('not_available');
+    expect(await codeOf(documents.revise(A, id))).toBe('not_available');
+    const refused = await inOrganization(A.organizationId, (tx) =>
+      tx.execute(sql`update documents set state = 'accepted' where id = ${id}`),
+    ).then(
+      () => 'no error',
+      () => 'refused',
+    );
+    expect(refused).toBe('refused');
+    await documents.answer(A, id, 'cancelled');
+    expect((await documents.get(A, id)).state).toBe('cancelled');
+  });
+});
+
 describe('two organizations', () => {
   it("never see, change or issue each other's documents (not found, never forbidden)", async () => {
     const theirs = await documents.createDraft(B, { ...portal, subject: 'Porte en bois' });

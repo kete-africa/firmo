@@ -77,7 +77,7 @@
   "document_clauses": "Clauses",
   "document_delivery": "Délai",
   "document_deposit": "Acompte (%)",
-  "document_download": "Télécharger le PDF",
+  "document_download": "Télécharger",
   "document_issue": "Émettre",
   "document_issue_confirm": "Émettre ce document ? Son numéro sera définitif et il ne pourra plus être modifié.",
   "document_issue_refused": "Le document a changé ou n'est pas complet : regarde l'aperçu à nouveau.",
@@ -200,5 +200,12 @@
   "type_short_proforma": "PRO",
   "type_short_quote": "DEV",
   "chat_privacy_note": "Tes vocaux et tes photos ne sont pas conservés : je garde seulement ce que j’en ai lu, dans ton espace. Tes prix ne servent qu’à tes documents.",
-  "document_not_found": "Ce document est introuvable."
+  "document_not_found": "Ce document est introuvable.",
+  "state_paid": "Acquittée",
+  "state_to_pay": "À payer",
+  "state_expired": "Expiré",
+  "state_ordered": "Commandée",
+  "answer_ordered": "Marquer commandée",
+  "answer_unanswered": "Marquer sans réponse",
+  "valid_until": "valable jusqu’au {date}"
 }

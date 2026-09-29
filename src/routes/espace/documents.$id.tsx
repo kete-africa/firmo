@@ -14,8 +14,14 @@ import {
   shareDocument,
   type DocumentDetail,
 } from '@/features/space';
-import { formatMoney } from '@/features/documents/client';
-import { Money, Notice, stateLabel, typeLabel } from '@/lib/ui';
+import {
+  canConvert,
+  canRevise,
+  formatMoney,
+  nextAnswers,
+  type Answer,
+} from '@/features/documents/client';
+import { Money, Notice, stateLabel, typeLabel, useIsoDate } from '@/lib/ui';
 import * as m from '@/paraglide/messages.js';
 
 // One document: its lines and groups, its conditions, its totals — editable while a draft, then
@@ -211,7 +217,16 @@ function DocumentScreen() {
         </Link>
         <div className="min-w-0 flex-1 text-center">
           <h1 className="truncate font-number text-title font-bold">{title}</h1>
-          <p className="text-body-sm text-bark">{stateLabel(detail.state)}</p>
+          <p className="text-body-sm text-bark">
+            {stateLabel(detail.state, {
+              type: detail.type,
+              expired: detail.expired,
+              paid: detail.paid,
+            })}
+            {detail.validUntil && detail.state !== 'draft'
+              ? ` · ${m.valid_until({ date: useIsoDate(detail.validUntil) })}`
+              : ''}
+          </p>
         </div>
         <span className="w-6" />
       </div>
@@ -737,7 +752,7 @@ function IssuedActions({
           href={`/api/documents/${detail.id}/pdf`}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex h-12 flex-1 items-center justify-center rounded-control bg-ink font-semibold text-sand"
+          className="inline-flex h-12 flex-1 items-center justify-center whitespace-nowrap rounded-control bg-ink px-3 font-semibold text-sand"
         >
           {m.document_download()}
         </a>
@@ -765,65 +780,41 @@ function IssuedActions({
       </div>
       {menu ? (
         <div className="flex flex-col border border-rule bg-paper">
-          {detail.type === 'quote' ? (
-            <>
+          {(['proforma', 'invoice'] as const)
+            .filter((target) => canConvert(detail.type, detail.state, target))
+            .map((target) => (
               <MenuItem
-                onClick={() =>
-                  void go(convertDocument({ data: { id: detail.id, target: 'invoice' } }))
-                }
+                key={target}
+                onClick={() => void go(convertDocument({ data: { id: detail.id, target } }))}
               >
-                {m.convert_invoice()}
+                {target === 'invoice' ? m.convert_invoice() : m.convert_proforma()}
               </MenuItem>
-              <MenuItem
-                onClick={() =>
-                  void go(convertDocument({ data: { id: detail.id, target: 'proforma' } }))
-                }
-              >
-                {m.convert_proforma()}
-              </MenuItem>
-            </>
-          ) : null}
-          {detail.type === 'proforma' ? (
-            <MenuItem
-              onClick={() =>
-                void go(convertDocument({ data: { id: detail.id, target: 'invoice' } }))
-              }
-            >
-              {m.convert_invoice()}
+            ))}
+          {canRevise(detail.type, detail.state) ? (
+            <MenuItem onClick={() => void go(reviseDocument({ data: { id: detail.id } }))}>
+              {m.document_revise()}
             </MenuItem>
           ) : null}
-          <MenuItem onClick={() => void go(reviseDocument({ data: { id: detail.id } }))}>
-            {m.document_revise()}
-          </MenuItem>
-          {detail.state === 'issued' ? (
-            <>
-              <MenuItem
-                onClick={() =>
-                  void go(answerDocument({ data: { id: detail.id, state: 'accepted' } }))
-                }
-              >
-                {m.answer_accepted()}
-              </MenuItem>
-              <MenuItem
-                onClick={() =>
-                  void go(answerDocument({ data: { id: detail.id, state: 'refused' } }))
-                }
-              >
-                {m.answer_refused()}
-              </MenuItem>
-              <MenuItem
-                onClick={() =>
-                  void go(answerDocument({ data: { id: detail.id, state: 'cancelled' } }))
-                }
-              >
-                {m.answer_cancelled()}
-              </MenuItem>
-            </>
-          ) : null}
+          {nextAnswers(detail.type, detail.state).map((answer) => (
+            <MenuItem
+              key={answer}
+              onClick={() => void go(answerDocument({ data: { id: detail.id, state: answer } }))}
+            >
+              {answerLabel(detail.type, answer)}
+            </MenuItem>
+          ))}
         </div>
       ) : null}
     </div>
   );
+}
+
+/** How an answer reads for this type: a proforma is ordered, a quote accepted. */
+function answerLabel(type: DocumentDetail['type'], answer: Answer): string {
+  if (answer === 'accepted') return type === 'proforma' ? m.answer_ordered() : m.answer_accepted();
+  if (answer === 'refused') return m.answer_refused();
+  if (answer === 'unanswered') return m.answer_unanswered();
+  return m.answer_cancelled();
 }
 
 function MenuItem({ onClick, children }: { onClick: () => void; children: ReactNode }) {

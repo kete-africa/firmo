@@ -40,3 +40,12 @@ export {
   type DocumentsDeps,
 } from './application';
 export type { DraftInput, PaymentInput, ProfileInput } from './contracts';
+export {
+  answersOf,
+  canConvert,
+  canRevise,
+  isExpired,
+  nextAnswers,
+  validUntil,
+  type Answer,
+} from './domain/lifecycle';
