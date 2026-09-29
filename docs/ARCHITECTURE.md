@@ -14,7 +14,7 @@ flowchart LR
   end
   subgraph Firmo["Firmo (one image)"]
     Web[web role<br/>pages · webhooks · API]
-    Worker[worker role<br/>inbox · deliveries · outbox]
+    Worker[worker<br/>inbox · deliveries · outbox<br/>in the web process for now]
   end
   WA -->|verified webhook| Web
   TG -->|verified webhook| Web
@@ -31,7 +31,9 @@ The phases that bring each part are in `ROADMAP.md`. Delivered: the web role wit
 `/.well-known/kete` and the outbox (phase 0); the document — model, calculations, numbering,
 issuance, PDF (phase 1, `src/features/documents/README.md`); identity — a sender is one Compte
 Kete person and organization, the web space opens through a one-time link (phase 2,
-`src/features/identity/README.md`).
+`src/features/identity/README.md`); the conversation — a bounded agent with guarded tools, the
+inbox and its worker, WhatsApp, Telegram and OpenAI adapters (phase 3,
+`src/features/conversation/README.md`, decisions 0001 and 0002).
 
 ## Layers
 

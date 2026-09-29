@@ -19,7 +19,8 @@
     "i18n:check": "tsx tooling/scripts/check-hardcoded-strings.ts",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "eval:conversation": "tsx --tsconfig tsconfig.json scripts/eval-conversation.ts"
   },
   "dependencies": {
     "@kete/auth": "npm:@kete-africa/auth@^0.1.0",
@@ -31,6 +32,7 @@
     "@tanstack/react-start": "^1.168.59",
     "decimal.js": "^10.6.0",
     "drizzle-orm": "^0.45.3",
+    "openai": "^6.49.0",
     "pg": "^8.23.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

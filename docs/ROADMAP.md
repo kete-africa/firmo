@@ -112,7 +112,7 @@ Each person who writes to Firmo is one Compte Kete person, one organization, one
 
 ---
 
-## Phase 3 — Conversation · `specs/004-conversation`
+## Phase 3 — Conversation · `specs/004-conversation` · _delivered; one human proof pending_
 
 ### Objective
 
@@ -122,9 +122,9 @@ A voice note, a photo or a text becomes a reading, then a draft, then an issued 
 
 - A messaging port with WhatsApp and Telegram adapters (verified webhooks), a durable inbox and a
   worker; replies only to the sender; WhatsApp's 24-hour window respected (templates outside it).
-- An AI port with an OpenAI adapter: transcription, reading of a photo, structured draft,
-  corrections in natural language, intents; the reading is shown before composing; nothing
-  invented, prices never touched.
+- An AI port with an OpenAI adapter: transcription, reading of a photo, and one agent turn per
+  message acting through guarded tools (decision 0002); the reading is shown before composing;
+  nothing invented, prices never touched.
 - The first-document question (the name it leaves under); preview, issuance, PDF sent in the
   chat; usual items remembered; commands (open my space, subscribe, help).
 - The reference's conversation journeys and evaluation sets, run against a fake model in CI and
@@ -149,8 +149,8 @@ The tradesman makes the document his, from his phone.
   purpose-built at 375 px from the validated reference screens, French and English.
 - A share link per document for his client: the PDF, read-only, revocable; its opening is counted
   (Firmo's usage indicator), without IP or fingerprint.
-- Raw media (voice, photo) kept for a limited, stated time, then only the text read is kept; said
-  at first use.
+- Said at first use: voice notes and photos are never kept — only what was heard or read (phase 3
+  already erases message bodies once handled).
 
 ### Proof
 
