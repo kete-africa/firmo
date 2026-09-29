@@ -25,9 +25,12 @@ WORKDIR /app
 # pnpm is installed explicitly: corepack signature checks have broken builds before.
 RUN npm install -g pnpm@11.25.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-# @kete-africa/* come from GitHub Packages: the read token is a build secret, handed to pnpm
-# through the environment for this step only — never written to a file or an image layer.
-RUN --mount=type=secret,id=KETE_PACKAGES_TOKEN,env=KETE_PACKAGES_TOKEN     env "npm_config_//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}" pnpm install --frozen-lockfile
+# @kete-africa/* come from GitHub Packages: the read token is a build secret, present for this
+# step only. The user-level config names the variable, never the token, and is removed at once.
+RUN --mount=type=secret,id=KETE_PACKAGES_TOKEN,env=KETE_PACKAGES_TOKEN \
+    echo '//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}' > /root/.npmrc \
+    && pnpm install --frozen-lockfile \
+    && rm /root/.npmrc
 COPY . .
 RUN pnpm build && pnpm prune --prod
 

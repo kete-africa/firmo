@@ -21,8 +21,12 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      # pnpm takes registry credentials from the user-level config only; the file names the
+      # variable, never the token itself.
       - name: Install (@kete-africa/* from GitHub Packages)
-        run: env "npm_config_//npm.pkg.github.com/:_authToken=$KETE_PACKAGES_TOKEN" pnpm install --frozen-lockfile
+        run: |
+          echo '//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}' >> ~/.npmrc
+          pnpm install --frozen-lockfile
         env:
           KETE_PACKAGES_TOKEN: ${{ secrets.KETE_PACKAGES_TOKEN }}
       - name: Lint, types, formatting, catalogs

@@ -55,5 +55,7 @@ NNN-slug   one Spec Kit feature, branched from dev
 - Node 22 · pnpm 11 · TypeScript strict · Typst 0.15 (PDF)
 - Spec Kit `v0.16.0`, run through `uvx`, never from a global install (`speckit-*` skills).
 - `@kete/*` are `@kete-africa/*` from GitHub Packages (kete-core decision 0005), aliased in
-  `package.json`. pnpm takes the read token only from a trusted source, never the project's
-  `.npmrc`: `env "npm_config_//npm.pkg.github.com/:_authToken=$KETE_PACKAGES_TOKEN" pnpm install`.
+  `package.json`. pnpm takes registry credentials from the user-level config only, never the
+  project's `.npmrc`: add `//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}` (the variable,
+  not the token) to `~/.npmrc`, and keep `KETE_PACKAGES_TOKEN` (`read:packages`) in the
+  environment.
