@@ -1,7 +1,8 @@
 import { AccountUnavailableError, type AccountDirectory } from '@/features/identity';
+import type { SubscriptionDirectory } from '@/features/plans';
 
 /**
- * The Compte Kete adapter of the identity port (kete-core spec 013). Firmo authenticates as itself
+ * The Compte Kete adapter of the identity and subscription ports (kete-core specs 013 and 014). Firmo authenticates as itself
  * with OAuth `client_credentials` (scope `kete:people`); the token is kept until shortly before it
  * expires. Nothing personal is logged.
  */
@@ -10,7 +11,7 @@ export function accountDirectory(options: {
   clientId: string;
   clientSecret: string;
   fetch?: typeof fetch;
-}): AccountDirectory {
+}): AccountDirectory & SubscriptionDirectory {
   const http = options.fetch ?? fetch;
   const accountUrl = options.accountUrl.replace(/\/$/, '');
   let cached: { token: string; until: number } | null = null;
@@ -37,16 +38,17 @@ export function accountDirectory(options: {
     return cached.token;
   }
 
-  async function call<T>(path: string, body: unknown): Promise<T> {
+  /** A POST with a JSON body, or a GET without one. */
+  async function call<T>(path: string, body?: unknown): Promise<T> {
     const send = async () =>
       http(`${accountUrl}${path}`, {
-        method: 'POST',
+        method: body === undefined ? 'GET' : 'POST',
         headers: {
           authorization: `Bearer ${await token()}`,
-          'content-type': 'application/json',
           accept: 'application/json',
+          ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         },
-        body: JSON.stringify(body),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       }).catch(() => null);
     let response = await send();
     if (response?.status === 401) {
@@ -61,5 +63,11 @@ export function accountDirectory(options: {
   return {
     provisionPerson: (input) => call('/api/apps/people', input),
     signInLink: (input) => call('/api/apps/sign-in-links', input),
+    async firmoAccessUntil(organizationId) {
+      const { access } = await call<{ access: Record<string, string> }>(
+        `/api/apps/access?organizationId=${encodeURIComponent(organizationId)}`,
+      );
+      return access.firmo ?? null;
+    },
   };
 }

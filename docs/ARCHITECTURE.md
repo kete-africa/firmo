@@ -34,7 +34,10 @@ Kete person and organization, the web space opens through a one-time link (phase
 `src/features/identity/README.md`); the conversation — a bounded agent with guarded tools, the
 inbox and its worker, WhatsApp, Telegram and OpenAI adapters (phase 3,
 `src/features/conversation/README.md`, decisions 0001 and 0002); the client space — documents,
-editing, issuance, share links, presentation (phase 4, `src/features/space/README.md`).
+editing, issuance, share links, presentation (phase 4, `src/features/space/README.md`); three
+document types, each with its own life (phase 4.1, `specs/006-document-types`); plans — offered
+documents, then the Compte Kete's Firmo offer, counted under an issuance lock, and the model's cost
+measured (phase 5, `src/features/plans/README.md`).
 
 ## Layers
 

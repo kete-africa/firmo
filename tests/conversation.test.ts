@@ -237,6 +237,55 @@ describe('a quote, from a sale said to an issued PDF', () => {
       /DEV-\d{4}-001\.pdf\|devis DEV-\d{4}-001/,
     );
   });
+
+  it('counts what the model cost, per turn and for the document it worked on', async () => {
+    const organizationId = organizations.at(-1) ?? '';
+    const { rows } = await owner.query<{ turns: string; calls: string; documents: string }>(
+      `select count(*) as turns, sum(model_calls) as calls, count(document_id) as documents
+       from ai_usage where organization_id = $1`,
+      [organizationId],
+    );
+    expect(rows[0]).toMatchObject({ turns: '4', calls: '4' });
+    expect(Number(rows[0]?.documents)).toBeGreaterThan(0);
+  });
+});
+
+describe('the plans (spec 007)', () => {
+  it('beyond what was bought, the code sends the way to subscribe and keeps the proposal', async () => {
+    const number = `2289${String(Date.now() + 1).slice(-7)}`;
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const { model } = scriptedModel([
+      {
+        calls: [
+          { name: 'add_to_draft', args: saleArgs },
+          { name: 'set_issuer_name', args: { name: 'Atelier Kodjo' } },
+          { name: 'propose_issue', args: {} },
+        ],
+        reply: 'Voici l’aperçu.',
+      },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents: createDocuments({
+        renderer: typstRenderer(),
+        files: memoryStorage(),
+        gate: { admit: async () => 'plan_required' },
+      }),
+    });
+    await conversation.handle(text(number, `${sale}. Atelier Kodjo, fais le pdf final`));
+    sent.length = 0;
+    await conversation.handle({ ...text(number, ''), kind: 'action', action: ISSUE_CONFIRM });
+    expect(sent.some((s) => s.document)).toBe(false);
+    const way = sent.find((s) => s.text?.includes('https://compte.test/l/'));
+    expect(way?.text).toContain('abonne');
+    const { rows } = await owner.query<{ pending: unknown }>(
+      'select pending_issue as pending from conversations where sender = $1',
+      [number],
+    );
+    expect(rows[0]?.pending).not.toBeNull();
+  });
 });
 
 describe('the guards', () => {

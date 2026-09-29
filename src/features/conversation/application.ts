@@ -13,6 +13,7 @@ import {
 } from './draft';
 import {
   loadConversation,
+  recordUsage,
   saveConversation,
   type ConversationState,
 } from './infrastructure/conversations';
@@ -54,6 +55,8 @@ type Outgoing =
   | { kind: 'document'; pdf: Uint8Array; filename: string; caption: string };
 
 export const ISSUE_CONFIRM = 'issue:confirm';
+/** Refusals of the plans (spec 007): the code answers them, with the way to subscribe. */
+const PLAN_REFUSALS = new Set(['plan_required', 'quota_reached', 'plans_unavailable']);
 export const ISSUE_CANCEL = 'issue:cancel';
 const AFFIRMATIVE =
   /\b(oui|ouais|ok|okay|d'?accord|vas[- ]y|valide|valid[ée]|c'?est bon|[ée]mets?|confirme|yes|go)\b/i;
@@ -160,6 +163,14 @@ export function createConversation(deps: ConversationDeps) {
 
       const text = await textOf(message, channel, usage);
       if (!text) {
+        await inOrganization(actor.organizationId, (tx) =>
+          recordUsage(tx, {
+            organizationId: actor.organizationId,
+            channel: message.channel,
+            documentId: turn.workedOn(),
+            usage,
+          }),
+        );
         await channel.sendText(to, m.chat_unsupported({}, { locale }));
         return { organizationId: actor.organizationId, usage };
       }
@@ -190,7 +201,15 @@ export function createConversation(deps: ConversationDeps) {
       if (sender.status === 'new') {
         turn.outbox.push({ kind: 'text', text: m.chat_privacy_note({}, { locale }) });
       }
-      await inOrganization(actor.organizationId, (tx) => saveConversation(tx, turn.state));
+      await inOrganization(actor.organizationId, async (tx) => {
+        await saveConversation(tx, turn.state);
+        await recordUsage(tx, {
+          organizationId: actor.organizationId,
+          channel: message.channel,
+          documentId: turn.workedOn(),
+          usage,
+        });
+      });
       await deliver(channel, to, turn.outbox);
       return { organizationId: actor.organizationId, usage };
     },
@@ -250,6 +269,7 @@ function createTurn(input: {
   const outbox: Outgoing[] = [];
   let draftChanged = false;
   let lastMessage = '';
+  let issuedId: number | null = null;
 
   const typeLabel = (type: 'quote' | 'proforma' | 'invoice') =>
     ({
@@ -335,9 +355,25 @@ function createTurn(input: {
         filename: `${issued.number.replace(/[/\\]/g, '-')}.pdf`,
         caption,
       });
+      issuedId = pending.documentId;
       resetDraft();
       return ok({ emis: issued.number });
     } catch (error) {
+      if (error instanceof DocumentError && PLAN_REFUSALS.has(error.code)) {
+        // The proposal stays pending: once subscribed, "oui" issues it. The code writes the way.
+        const link =
+          error.code === 'plans_unavailable'
+            ? null
+            : await deps.identity.spaceLink(personId, '/espace/abonnement');
+        const text =
+          error.code === 'plan_required'
+            ? m.chat_plan_required({ url: link?.url ?? '' }, { locale })
+            : error.code === 'quota_reached'
+              ? m.chat_quota_reached({ url: link?.url ?? '' }, { locale })
+              : m.chat_plans_unavailable({}, { locale });
+        outbox.push({ kind: 'text', text });
+        return refused(error.code, { note: 'le code a envoyé le message et le lien' });
+      }
       if (error instanceof DocumentError) {
         state.pendingIssue = null;
         return refused(
@@ -452,6 +488,7 @@ function createTurn(input: {
         home: '/espace',
         documents: '/espace/documents',
         presentation: '/espace/presentation',
+        subscription: '/espace/abonnement',
       }[page];
       const link = await deps.identity.spaceLink(personId, path);
       outbox.push({ kind: 'text', text: m.chat_space_link({ url: link.url }, { locale }) });
@@ -462,6 +499,8 @@ function createTurn(input: {
   return {
     state,
     outbox,
+    /** The document this turn worked on — to count what the model cost for each document. */
+    workedOn: () => issuedId ?? state.pendingIssue?.documentId ?? state.documentId,
     confirmIssue: (pressed: boolean) => confirmIssue(pressed),
     cancelIssue() {
       state.pendingIssue = null;

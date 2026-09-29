@@ -199,6 +199,23 @@ test('in English too', async ({ page, context }) => {
   await shot(page, '4-accueil-en');
 });
 
+test('his subscription: the offered documents left, and the way to the Compte Kete', async ({
+  page,
+  context,
+}) => {
+  await signIn(context, B);
+  await page.goto('/espace');
+  await page.getByRole('link', { name: 'Mon abonnement' }).click();
+  await expect(page.getByRole('heading', { name: 'Ton abonnement' })).toBeVisible();
+  await expect(page.getByText('Documents offerts restants : 3 sur 3.')).toBeVisible();
+  await expect(
+    page
+      .getByRole('link', { name: 'S’abonner à Firmo' })
+      .or(page.getByRole('link', { name: "S'abonner à Firmo" })),
+  ).toHaveAttribute('href', 'http://localhost:9/espace/abonnements');
+  await shot(page, '6-abonnement');
+});
+
 test("another organization's document is not found", async ({ page, context }) => {
   await signIn(context, A);
   await page.goto(`/espace/documents/${foreignId}`);

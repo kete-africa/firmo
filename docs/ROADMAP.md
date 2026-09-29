@@ -184,7 +184,7 @@ under three titles.
 
 ---
 
-## Phase 5 — Plans and quota · `specs/007-plans`
+## Phase 5 — Plans and quota · `specs/007-plans` · _delivered_
 
 ### Objective
 
@@ -193,16 +193,24 @@ Firmo is paid through the Compte Kete, and never gives more than what was bought
 ### Scope
 
 - Three final documents offered; then the Firmo offer of the Compte Kete (Chariow through the
-  payment port); quota per paid period, consumed atomically at issuance; a draft correction
-  consumes nothing.
-- "Subscribe" in the chat opens Mon espace Kete signed in, the Firmo offer ready; the confirmation
-  comes back in the chat (outbox; a template outside WhatsApp's window).
-- The AI cost of each document, measured and reported.
+  payment port, in the Compte Kete): thirty documents per rolling thirty days while it is active,
+  counted and consumed under the organization's issuance lock; drafts, previews and corrections
+  consume nothing (`src/features/plans/README.md`).
+- The Compte Kete says only until when the Firmo access runs (kete-core spec 014); beyond the
+  offered documents, without its answer, issuance fails closed.
+- "Abonnement" in the space and in the chat (a one-time link) opens where he stands and the way
+  to the Compte Kete's subscriptions; a refused issuance stays proposed — once subscribed, "oui"
+  issues it.
+- The AI cost of each turn and of the document it worked on, measured (`ai_usage`); reported to
+  the operators and the Cockpit in phase 6.
 
 ### Proof
 
-- `[agent]` With the fake payment provider: free documents, payment, quota, refusal beyond it.
+- `[agent]` With a fake Compte Kete: offered documents, subscription, quota, refusal beyond it,
+  failure closed (`tests/plans.test.ts`); the adapter against its contract (`tests/account.test.ts`).
 - `[agent]` Two issuances racing for the last document: exactly one succeeds.
+- `[agent]` The chat sends the way to subscribe and keeps the proposal; the model's cost is
+  counted per turn and document (`tests/conversation.test.ts`); the space at 375 px (e2e).
 
 ---
 
@@ -219,6 +227,9 @@ Kete operators run Firmo; Kete Cockpit sees it live.
   configuration (free documents, quota, AI limits, link and retention durations).
 - Firmo's manifest events through the outbox (`document.issued`, `document.shared`,
   `subscription` facts, AI cost), never a price or a name; registered in Kete Cockpit.
+- A Compte Kete payment reaches Firmo, which confirms it in the chat by itself (outbox; a template
+  outside WhatsApp's window) — until then, the confirmation is seen on return and at the next
+  message.
 
 ### Proof
 

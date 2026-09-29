@@ -180,6 +180,35 @@ export async function latestIssuedId(tx: Transaction): Promise<number | null> {
   return row ? Number(row.id) : null;
 }
 
+/**
+ * Serializes the organization's issuances until the transaction ends: the quota is counted and
+ * consumed under this lock, so two issuances never share the last document.
+ */
+export async function lockIssuances(tx: Transaction, organizationId: string): Promise<void> {
+  await tx.execute(
+    sql`select pg_advisory_xact_lock(hashtextextended(${`firmo.issue:${organizationId}`}, 0))`,
+  );
+}
+
+/** First issuances (a correction /R2 excluded), optionally since a date, after the first few. */
+export async function countFirstIssuances(
+  tx: Transaction,
+  options: { since?: Date; excludingFirst?: number } = {},
+): Promise<number> {
+  const since = options.since ? options.since.toISOString() : null;
+  const [row] = await rows<{ count: string }>(
+    tx,
+    sql`select count(*) as count from (
+          select issued_at from documents
+          where revision = 1 and issued_at is not null
+          order by issued_at, id
+          offset ${options.excludingFirst ?? 0}
+        ) as counted
+        where ${since}::timestamptz is null or issued_at >= ${since}::timestamptz`,
+  );
+  return Number(row?.count ?? 0);
+}
+
 export async function setLogoKey(tx: Transaction, logoKey: string | null): Promise<boolean> {
   const result = await tx.execute(
     sql`update organization_profiles set logo_key = ${logoKey}, updated_at = now()`,

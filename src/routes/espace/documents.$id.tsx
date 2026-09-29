@@ -115,9 +115,12 @@ function DocumentScreen() {
     taxRate: detail.taxRate ?? '',
   }));
   const [dirty, setDirty] = useState(false);
-  const [notice, setNotice] = useState<{ tone: 'error' | 'success' | 'info'; text: string } | null>(
-    null,
-  );
+  const [notice, setNotice] = useState<{
+    tone: 'error' | 'success' | 'info';
+    text: string;
+    /** Beyond what was bought: the way to his subscription. */
+    subscribe?: boolean;
+  } | null>(null);
   const [busy, setBusy] = useState(false);
   const editable = detail.state === 'draft';
 
@@ -200,7 +203,15 @@ function DocumentScreen() {
     const issued = await issueDocument({ data: { id: detail.id, sha256: prepared.sha256 } });
     setBusy(false);
     if (!issued.ok) {
-      setNotice({ tone: 'error', text: m.document_issue_refused() });
+      if (issued.reason === 'plan_required' || issued.reason === 'quota_reached') {
+        const text =
+          issued.reason === 'plan_required'
+            ? m.document_plan_required()
+            : m.document_quota_reached();
+        setNotice({ tone: 'error', text, subscribe: true });
+      } else {
+        setNotice({ tone: 'error', text: m.document_issue_refused() });
+      }
       return;
     }
     setNotice({ tone: 'success', text: m.document_issued({ number: issued.number }) });
@@ -245,6 +256,14 @@ function DocumentScreen() {
       {notice ? (
         <div className="px-4 py-2">
           <Notice tone={notice.tone}>{notice.text}</Notice>
+          {notice.subscribe ? (
+            <Link
+              to="/espace/abonnement"
+              className="mt-2 inline-block text-body-sm font-semibold underline"
+            >
+              {m.plan_link()}
+            </Link>
+          ) : null}
         </div>
       ) : null}
 

@@ -20,6 +20,7 @@ export async function purgeOrganizations(owner: pg.Pool, organizations: string[]
       await client.query(`alter table ${table} disable trigger ${trigger}`);
     for (const table of [
       'conversations',
+      'ai_usage',
       'messaging_identities',
       'document_payments',
       'documents',
