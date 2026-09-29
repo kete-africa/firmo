@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [dev, main]
+  push:
+    branches: [dev]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      # pnpm takes registry credentials from the user-level config only; the file names the
+      # variable, never the token itself.
+      - name: Install (@kete-africa/* from GitHub Packages)
+        run: |
+          echo '//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}' >> ~/.npmrc
+          pnpm install --frozen-lockfile
+        env:
+          KETE_PACKAGES_TOKEN: ${{ secrets.KETE_PACKAGES_TOKEN }}
+      - name: Lint, types, formatting, catalogs
+        run: pnpm check
+      - name: Migrate the Neon "test" branch
+        run: pnpm db:migrate
+        env:
+          FIRMO_OWNER_URL: ${{ secrets.FIRMO_TEST_OWNER_URL }}
+      - name: Tests (integration on the Neon "test" branch)
+        run: pnpm test
+        env:
+          FIRMO_TEST_APP_URL: ${{ secrets.FIRMO_TEST_APP_URL }}
+          FIRMO_TEST_OWNER_URL: ${{ secrets.FIRMO_TEST_OWNER_URL }}
+
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the image
+        env:
+          KETE_PACKAGES_TOKEN: ${{ secrets.KETE_PACKAGES_TOKEN }}
+        run: docker build --secret id=KETE_PACKAGES_TOKEN,env=KETE_PACKAGES_TOKEN -t firmo:ci .
+      - name: The image starts and reports healthy (Neon "test" branch)
+        env:
+          FIRMO_TEST_APP_URL: ${{ secrets.FIRMO_TEST_APP_URL }}
+        run: |
+          docker run -d --name firmo -p 3000:3000 \
+            -e FIRMO_DATABASE_URL="$FIRMO_TEST_APP_URL" -e KETE_ENVIRONMENT=preview firmo:ci
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/health; then echo; break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:3000/health | grep -q '"status":"healthy"'
+          curl -fsS http://localhost:3000/.well-known/kete | grep -q '"environment":"preview"'
+          docker exec firmo /usr/local/bin/typst --version
+      - name: Container logs
+        if: failure()
+        run: docker logs firmo || true

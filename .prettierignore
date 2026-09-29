@@ -1,0 +1,16 @@
+pnpm-lock.yaml
+**/*.gen.ts
+.specify/
+.claude/
+specs/
+**/*.gen.css
+**/src/paraglide
+**/.tanstack
+**/test-results
+**/playwright-report
+**/dist
+**/project.inlang/cache
+**/project.inlang/.meta.json
+**/project.inlang/README.md
+document/
+docs/product/

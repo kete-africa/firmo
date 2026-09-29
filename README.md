@@ -10,8 +10,10 @@ his prices, our presentation. A Kete app.
 ## Run it
 
 ```sh
-pnpm install
 cp .env.example .env        # then fill the values
+# @kete-africa/* are read from GitHub Packages with a read:packages token (KETE_PACKAGES_TOKEN);
+# once: echo '//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}' >> ~/.npmrc
+pnpm install
 pnpm db:migrate test        # migrations on the Neon "test" branch
 pnpm test                   # unit and integration tests
 pnpm dev                    # http://localhost:3400

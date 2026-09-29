@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.*
+!.env.example
+.git
+.tanstack
+test-results
+playwright-report
+src/paraglide
+specs
