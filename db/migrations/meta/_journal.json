@@ -36,6 +36,13 @@
       "when": 1790700000004,
       "tag": "0004_conversation",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790700000005,
+      "tag": "0005_client_space",
+      "breakpoints": true
     }
   ]
 }

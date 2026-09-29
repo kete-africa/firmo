@@ -49,6 +49,42 @@ jobs:
           FIRMO_TEST_APP_URL: ${{ secrets.FIRMO_TEST_APP_URL }}
           FIRMO_TEST_OWNER_URL: ${{ secrets.FIRMO_TEST_OWNER_URL }}
 
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: check
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install (@kete-africa/* from GitHub Packages)
+        run: |
+          echo '//npm.pkg.github.com/:_authToken=${KETE_PACKAGES_TOKEN}' >> ~/.npmrc
+          pnpm install --frozen-lockfile
+        env:
+          KETE_PACKAGES_TOKEN: ${{ secrets.KETE_PACKAGES_TOKEN }}
+      - name: Typst 0.15.1 (checksum-verified)
+        run: |
+          archive=typst-x86_64-unknown-linux-musl.tar.xz
+          curl -fsSL "https://github.com/typst/typst/releases/download/v0.15.1/${archive}" -o "/tmp/${archive}"
+          echo "a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c  /tmp/${archive}" | sha256sum --check --strict
+          tar -xJf "/tmp/${archive}" -C /tmp
+          sudo install -m 0755 /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: The web space in a browser (production build, Neon "test" branch)
+        run: pnpm test:e2e
+        env:
+          FIRMO_TEST_APP_URL: ${{ secrets.FIRMO_TEST_APP_URL }}
+          FIRMO_TEST_OWNER_URL: ${{ secrets.FIRMO_TEST_OWNER_URL }}
+          FIRMO_TEST_STORAGE_ENDPOINT: ${{ secrets.FIRMO_TEST_STORAGE_ENDPOINT }}
+          FIRMO_TEST_STORAGE_REGION: ${{ secrets.FIRMO_TEST_STORAGE_REGION }}
+          FIRMO_TEST_STORAGE_BUCKET: ${{ secrets.FIRMO_TEST_STORAGE_BUCKET }}
+          FIRMO_TEST_STORAGE_ACCESS_KEY_ID: ${{ secrets.FIRMO_TEST_STORAGE_ACCESS_KEY_ID }}
+          FIRMO_TEST_STORAGE_SECRET_ACCESS_KEY: ${{ secrets.FIRMO_TEST_STORAGE_SECRET_ACCESS_KEY }}
+
   image:
     runs-on: ubuntu-latest
     timeout-minutes: 30

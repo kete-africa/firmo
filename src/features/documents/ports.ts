@@ -5,6 +5,11 @@ export interface DocumentRenderer {
     input: Record<string, unknown>,
     options: { createdAt: Date; logo?: { mediaType: string; content: Uint8Array } | null },
   ): Promise<RenderedPdf>;
+  /** The first page as a PNG image — for a live preview of a presentation. */
+  renderFirstPagePng?(
+    input: Record<string, unknown>,
+    options: { createdAt: Date; logo?: { mediaType: string; content: Uint8Array } | null },
+  ): Promise<Uint8Array>;
 }
 
 export interface RenderedPdf {

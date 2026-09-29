@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { inOrganization } from '@/platform/tenancy';
 import {
   draftInput,
@@ -128,6 +129,34 @@ export function createDocuments(deps: DocumentsDeps) {
     return { number: source?.number ?? null, type: source?.type ?? null };
   }
 
+  /** The draft's canonical snapshot as the tradesman sees it; not issuable if it cannot be exact. */
+  async function currentSnapshot(actor: Actor, id: number) {
+    return inOrganization(actor.organizationId, async (tx) => {
+      const document = await repo.loadDocument(tx, id);
+      if (!document) throw notFound();
+      if (document.state !== 'draft') throw new DocumentError('not_a_draft', 409);
+      const profile = await requireProfile(tx);
+      const logo = await logoOf(profile);
+      const source = await sourceOf(tx, document);
+      try {
+        const snapshot = draftSnapshot(
+          facts(document, source.number, source.type),
+          header(profile, Boolean(logo)),
+        );
+        return { snapshot, logo };
+      } catch (error) {
+        if (error instanceof CalculationError || error instanceof SnapshotError) {
+          throw new DocumentError(
+            'not_issuable',
+            409,
+            error instanceof CalculationError ? error.code : undefined,
+          );
+        }
+        throw error;
+      }
+    });
+  }
+
   function header(profile: repo.StoredProfile, hasLogo: boolean): Header {
     return { ...profile, hasLogo };
   }
@@ -170,10 +199,14 @@ export function createDocuments(deps: DocumentsDeps) {
       const draft = parse(draftInput, input);
       return inOrganization(actor.organizationId, async (tx) => {
         const profile = await repo.loadProfile(tx);
-        return repo.insertDocument(tx, actor.organizationId, withDefaults(draft, profile), {
-          validityDays: profile?.defaultValidityDays ?? 30,
-          documentDate: today(now()),
-        });
+        // His clauses written once, enabled by default, join every new document.
+        const clauseIds = draft.clauseIds ?? (await repo.defaultClauseIds(tx));
+        return repo.insertDocument(
+          tx,
+          actor.organizationId,
+          { ...withDefaults(draft, profile), clauseIds },
+          { validityDays: profile?.defaultValidityDays ?? 30, documentDate: today(now()) },
+        );
       });
     },
 
@@ -206,37 +239,19 @@ export function createDocuments(deps: DocumentsDeps) {
      * Values Firmo could not read (lines to confirm) make it not issuable, never guessed.
      */
     async preview(actor: Actor, id: number): Promise<{ sha256: string; pdf: Uint8Array }> {
-      return inOrganization(actor.organizationId, async (tx) => {
-        const document = await repo.loadDocument(tx, id);
-        if (!document) throw notFound();
-        if (document.state !== 'draft') throw new DocumentError('not_a_draft', 409);
-        const profile = await requireProfile(tx);
-        const logo = await logoOf(profile);
-        const source = await sourceOf(tx, document);
-        let snapshot;
-        try {
-          snapshot = draftSnapshot(
-            facts(document, source.number, source.type),
-            header(profile, Boolean(logo)),
-          );
-        } catch (error) {
-          if (error instanceof CalculationError || error instanceof SnapshotError) {
-            throw new DocumentError(
-              'not_issuable',
-              409,
-              error instanceof CalculationError ? error.code : undefined,
-            );
-          }
-          throw error;
-        }
-        const shown = (JSON.parse(snapshot.canonicalJson) as { document: Record<string, unknown> })
-          .document;
-        const rendered = await deps.renderer.render(renderInput(shown, { number: 'BROUILLON' }), {
-          createdAt: now(),
-          logo,
-        });
-        return { sha256: snapshot.sha256, pdf: rendered.pdf };
+      const { snapshot, logo } = await currentSnapshot(actor, id);
+      const shown = (JSON.parse(snapshot.canonicalJson) as { document: Record<string, unknown> })
+        .document;
+      const rendered = await deps.renderer.render(renderInput(shown, { number: 'BROUILLON' }), {
+        createdAt: now(),
+        logo,
       });
+      return { sha256: snapshot.sha256, pdf: rendered.pdf };
+    },
+
+    /** The hash of the current preview, without rendering it (the PDF is the same snapshot). */
+    async previewHash(actor: Actor, id: number): Promise<string> {
+      return (await currentSnapshot(actor, id)).snapshot.sha256;
     },
 
     /**
@@ -459,6 +474,180 @@ export function createDocuments(deps: DocumentsDeps) {
         };
       });
     },
+
+    // --- Presentation: clauses, numbering, logo ------------------------------------------------
+
+    async clauses(actor: Actor) {
+      return inOrganization(actor.organizationId, (tx) => repo.listClauses(tx));
+    },
+
+    /** A clause written once, reused on his documents; Firmo shapes wording, never substance. */
+    async saveClause(
+      actor: Actor,
+      clause: { id?: number | null; title: string; body: string; enabledByDefault: boolean },
+    ): Promise<number> {
+      const title = clause.title.trim();
+      const body = clause.body.trim();
+      if (!title || !body || title.length > 200 || body.length > 2000) {
+        throw new DocumentError('invalid_input', 422);
+      }
+      const id = await inOrganization(actor.organizationId, (tx) =>
+        repo.saveClause(tx, actor.organizationId, { ...clause, title, body }),
+      );
+      if (!id) throw notFound();
+      return id;
+    },
+
+    async archiveClause(actor: Actor, id: number): Promise<void> {
+      const archived = await inOrganization(actor.organizationId, (tx) =>
+        repo.archiveClause(tx, id),
+      );
+      if (!archived) throw notFound();
+    },
+
+    /** How each document type is numbered, with an example of its next number. */
+    async numbering(actor: Actor) {
+      return inOrganization(actor.organizationId, async (tx) => {
+        const types = ['quote', 'proforma', 'invoice'] as const;
+        const year = now().getUTCFullYear();
+        return Promise.all(
+          types.map(async (type) => {
+            const settings = await repo.numberingOf(tx, type);
+            const example = formatSeriesNumber(
+              { ...settings, year: settings.cadence === 'annual' ? year : 0 },
+              1,
+            );
+            return { type, ...settings, example };
+          }),
+        );
+      });
+    },
+
+    /** Changing the format never resets a counter; a format the domain refuses is refused. */
+    async saveNumbering(
+      actor: Actor,
+      type: DocumentType,
+      settings: {
+        prefix: string;
+        separator: string;
+        cadence: 'annual' | 'continuous';
+        width: number;
+      },
+    ): Promise<void> {
+      const prefix = settings.prefix.trim();
+      try {
+        formatSeriesNumber(
+          { prefix, separator: settings.separator, width: settings.width, year: 0 },
+          1,
+        );
+      } catch {
+        throw new DocumentError('invalid_input', 422);
+      }
+      if (
+        !/^[A-Za-z0-9._/-]{0,24}$/.test(prefix) ||
+        !['-', '_', '/', '.'].includes(settings.separator)
+      ) {
+        throw new DocumentError('invalid_input', 422);
+      }
+      await inOrganization(actor.organizationId, (tx) =>
+        repo.saveNumbering(tx, actor.organizationId, type, { ...settings, prefix }),
+      );
+    },
+
+    /** His logo (a PNG already made safe by the caller): used by his next documents. */
+    async setLogo(actor: Actor, png: Uint8Array): Promise<void> {
+      const key = `organizations/${actor.organizationId}/logo-${createHash('sha256').update(png).digest('hex').slice(0, 16)}.png`;
+      await deps.files.put(key, png, 'image/png');
+      const updated = await inOrganization(actor.organizationId, (tx) => repo.setLogoKey(tx, key));
+      if (!updated) throw new DocumentError('profile_required', 409);
+    },
+
+    async removeLogo(actor: Actor): Promise<void> {
+      await inOrganization(actor.organizationId, (tx) => repo.setLogoKey(tx, null));
+    },
+
+    /** The first page of a sample document with his current presentation, as a PNG. */
+    async presentationPreview(actor: Actor): Promise<Uint8Array> {
+      if (!deps.renderer.renderFirstPagePng) throw new DocumentError('not_available', 409);
+      const profile = await inOrganization(actor.organizationId, (tx) => repo.loadProfile(tx));
+      if (!profile) throw new DocumentError('profile_required', 409);
+      const logo = await logoOf(profile);
+      const snapshot = draftSnapshot(sampleFacts(today(now())), header(profile, Boolean(logo)));
+      const shown = (JSON.parse(snapshot.canonicalJson) as { document: Record<string, unknown> })
+        .document;
+      return deps.renderer.renderFirstPagePng(renderInput(shown, { number: 'DEV-0001' }), {
+        createdAt: now(),
+        logo,
+      });
+    },
+
+    // --- Sharing -----------------------------------------------------------------------------
+
+    /**
+     * A link for his client: ONE issued document, read-only; a new link revokes the previous one.
+     * The token is returned once; only its hash is kept.
+     */
+    async share(actor: Actor, id: number): Promise<{ token: string }> {
+      const token = randomBytes(24).toString('base64url');
+      await inOrganization(actor.organizationId, async (tx) => {
+        const document = await repo.loadDocument(tx, id);
+        if (!document) throw notFound();
+        if (document.state === 'draft' || !document.pdfKey) {
+          throw new DocumentError('not_available', 409);
+        }
+        await repo.createShare(tx, actor.organizationId, id, hashToken(token));
+      });
+      return { token };
+    },
+
+    async revokeShare(actor: Actor, id: number): Promise<void> {
+      await inOrganization(actor.organizationId, async (tx) => {
+        if (!(await repo.loadDocument(tx, id))) throw notFound();
+        await repo.revokeShares(tx, id);
+      });
+    },
+
+    async shareStatus(actor: Actor, id: number) {
+      return inOrganization(actor.organizationId, (tx) => repo.shareOf(tx, id));
+    },
+
+    /** What a share link opens, for anyone holding it: the PDF, or nothing. */
+    async openShare(token: string): Promise<{ pdf: Uint8Array; number: string } | null> {
+      if (!/^[A-Za-z0-9_-]{20,64}$/.test(token)) return null;
+      const opened = await repo.openShare(hashToken(token));
+      if (!opened) return null;
+      const pdf = await deps.files.get(opened.pdfKey);
+      return pdf ? { pdf, number: opened.number } : null;
+    },
+  };
+}
+
+const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
+
+/** A sample document to preview a presentation: synthetic, never a real client or price. */
+function sampleFacts(date: string): DocumentFacts {
+  const d = (value: string) => new Dec(value);
+  return {
+    type: 'quote',
+    date,
+    subject: 'Fabrication d’un portail',
+    client: { name: 'Client exemple' },
+    validityDays: 30,
+    revision: 1,
+    draft: {
+      sections: [
+        {
+          sectionId: 'sample',
+          title: null,
+          position: 0,
+          lines: [
+            { label: 'Ouvrage exemple', quantity: d('1'), unitPrice: d('100000'), position: 0 },
+          ],
+        },
+      ],
+    },
+    clauses: [],
+    payments: [],
   };
 }
 

@@ -136,6 +136,7 @@ export function createConversation(deps: ConversationDeps) {
       const actor = { organizationId: sender.organizationId };
       if (message.kind === 'contact') {
         await channel.sendText(to, m.chat_welcome({}, { locale }));
+        await channel.sendText(to, m.chat_privacy_note({}, { locale }));
         return { organizationId: actor.organizationId, usage };
       }
       if (message.kind === 'unsupported') {
@@ -185,6 +186,10 @@ export function createConversation(deps: ConversationDeps) {
       usage.push(result.usage);
       const reply = guardReply(result.reply, text, turn.state.draft, locale);
       turn.finish(text, reply);
+      // Said at first use, not buried in terms: what is kept, and what is not.
+      if (sender.status === 'new') {
+        turn.outbox.push({ kind: 'text', text: m.chat_privacy_note({}, { locale }) });
+      }
       await inOrganization(actor.organizationId, (tx) => saveConversation(tx, turn.state));
       await deliver(channel, to, turn.outbox);
       return { organizationId: actor.organizationId, usage };

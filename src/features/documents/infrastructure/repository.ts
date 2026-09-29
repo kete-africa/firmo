@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import type { Transaction } from '@/platform/db';
+import { db, type Transaction } from '@/platform/db';
 import type { Draft } from '../contracts';
 import { Dec } from '../domain/money';
 import type { SeriesCadence } from '../domain/numbering';
@@ -657,4 +657,130 @@ export async function rememberItems(
       do update set last_price = coalesce(excluded.last_price, frequent_items.last_price),
                     last_seen_at = now()`);
   }
+}
+
+// --- Clauses, numbering, shares ------------------------------------------------------------
+
+export interface StoredClause {
+  id: number;
+  title: string;
+  body: string;
+  enabledByDefault: boolean;
+}
+
+export async function listClauses(tx: Transaction): Promise<StoredClause[]> {
+  const result = await rows(
+    tx,
+    sql`select id, title, body, enabled_by_default from clauses where archived_at is null order by id`,
+  );
+  return result.map((row) => ({
+    id: Number(row.id),
+    title: String(row.title),
+    body: String(row.body),
+    enabledByDefault: Boolean(row.enabled_by_default),
+  }));
+}
+
+export async function saveClause(
+  tx: Transaction,
+  organizationId: string,
+  clause: { id?: number | null; title: string; body: string; enabledByDefault: boolean },
+): Promise<number> {
+  if (clause.id) {
+    const result = await rows<{ id: string }>(
+      tx,
+      sql`update clauses set title = ${clause.title}, body = ${clause.body},
+            enabled_by_default = ${clause.enabledByDefault}, updated_at = now()
+          where id = ${clause.id} and archived_at is null returning id`,
+    );
+    return result[0] ? Number(result[0].id) : 0;
+  }
+  const [row] = await rows<{ id: string }>(
+    tx,
+    sql`insert into clauses (organization_id, title, body, enabled_by_default)
+        values (${organizationId}, ${clause.title}, ${clause.body}, ${clause.enabledByDefault})
+        returning id`,
+  );
+  return Number(row?.id);
+}
+
+export async function archiveClause(tx: Transaction, id: number): Promise<boolean> {
+  const result = await tx.execute(
+    sql`update clauses set archived_at = now() where id = ${id} and archived_at is null`,
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+export async function defaultClauseIds(tx: Transaction): Promise<number[]> {
+  const result = await rows<{ id: string }>(
+    tx,
+    sql`select id from clauses where enabled_by_default and archived_at is null order by id`,
+  );
+  return result.map((row) => Number(row.id));
+}
+
+export async function saveNumbering(
+  tx: Transaction,
+  organizationId: string,
+  type: DocumentType,
+  settings: { prefix: string; separator: string; cadence: SeriesCadence; width: number },
+): Promise<void> {
+  await tx.execute(sql`
+    insert into numbering_settings (organization_id, document_type, prefix, separator, cadence, width)
+    values (${organizationId}, ${type}, ${settings.prefix}, ${settings.separator},
+            ${settings.cadence}, ${settings.width})
+    on conflict (organization_id, document_type) do update set
+      prefix = excluded.prefix, separator = excluded.separator, cadence = excluded.cadence,
+      width = excluded.width, updated_at = now()`);
+}
+
+export async function createShare(
+  tx: Transaction,
+  organizationId: string,
+  documentId: number,
+  tokenHash: string,
+): Promise<void> {
+  await tx.execute(
+    sql`update document_shares set revoked_at = now()
+        where document_id = ${documentId} and revoked_at is null`,
+  );
+  await tx.execute(sql`
+    insert into document_shares (organization_id, document_id, token_hash)
+    values (${organizationId}, ${documentId}, ${tokenHash})`);
+}
+
+export async function revokeShares(tx: Transaction, documentId: number): Promise<void> {
+  await tx.execute(
+    sql`update document_shares set revoked_at = now()
+        where document_id = ${documentId} and revoked_at is null`,
+  );
+}
+
+export async function shareOf(
+  tx: Transaction,
+  documentId: number,
+): Promise<{ active: boolean; viewCount: number; lastOpenedAt: string | null }> {
+  const [row] = await rows(
+    tx,
+    sql`select coalesce(sum(view_count), 0)::int as views,
+               bool_or(revoked_at is null) as active,
+               max(last_opened_at) as last_opened
+        from document_shares where document_id = ${documentId}`,
+  );
+  return {
+    active: row?.active === true,
+    viewCount: Number(row?.views ?? 0),
+    lastOpenedAt: row?.last_opened ? new Date(String(row.last_opened)).toISOString() : null,
+  };
+}
+
+/** Opens a share by its token's hash, outside any organization: only through the definer function. */
+export async function openShare(
+  tokenHash: string,
+): Promise<{ pdfKey: string; number: string } | null> {
+  const result = await db.execute(
+    sql`select pdf_key, number from public.open_document_share(${tokenHash})`,
+  );
+  const row = result.rows[0] as { pdf_key: string; number: string } | undefined;
+  return row ? { pdfKey: row.pdf_key, number: row.number } : null;
 }
