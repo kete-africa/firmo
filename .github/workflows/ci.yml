@@ -29,6 +29,14 @@ jobs:
           pnpm install --frozen-lockfile
         env:
           KETE_PACKAGES_TOKEN: ${{ secrets.KETE_PACKAGES_TOKEN }}
+      - name: Typst 0.15.1 (checksum-verified), for the rendering tests
+        run: |
+          archive=typst-x86_64-unknown-linux-musl.tar.xz
+          curl -fsSL "https://github.com/typst/typst/releases/download/v0.15.1/${archive}" -o "/tmp/${archive}"
+          echo "a6d077d0a95eed5a2eba715b2dae06be954f624ccbf85758a03f389ded33118c  /tmp/${archive}" | sha256sum --check --strict
+          tar -xJf "/tmp/${archive}" -C /tmp
+          sudo install -m 0755 /tmp/typst-x86_64-unknown-linux-musl/typst /usr/local/bin/typst
+          typst --version
       - name: Lint, types, formatting, catalogs
         run: pnpm check
       - name: Migrate the Neon "test" branch

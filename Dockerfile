@@ -36,13 +36,15 @@ RUN pnpm build && pnpm prune --prod
 
 FROM node:22.14.0-bookworm-slim
 WORKDIR /app
-ENV NODE_ENV=production TYPST_BIN=/usr/local/bin/typst
+ENV NODE_ENV=production TYPST_BIN=/usr/local/bin/typst FIRMO_DOCUMENT_ROOT=/app/document
 RUN groupadd --system firmo && useradd --system --gid firmo --home-dir /app firmo
 COPY --from=typst /usr/local/bin/typst /usr/local/bin/typst
 COPY --from=build --chown=firmo:firmo /app/node_modules ./node_modules
 COPY --from=build --chown=firmo:firmo /app/package.json ./package.json
 COPY --from=build --chown=firmo:firmo /app/dist ./dist
 COPY --from=build --chown=firmo:firmo /app/db ./db
+# The document template bundle (template, fonts, assets), checked against its manifest at render.
+COPY --from=build --chown=firmo:firmo /app/document/templates ./document/templates
 USER firmo
 EXPOSE 3000
 

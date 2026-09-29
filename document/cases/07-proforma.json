@@ -1,0 +1,19 @@
+{
+  "id": "07-proforma",
+  "type": "FACTURE PROFORMA",
+  "number": "PRO-2026-007",
+  "date": "08.08.2026",
+  "issuer": {"mark": "MA", "name": "MERCURE AUTO", "trade": "Pièces et entretien automobile", "color": "#755019", "phone": "+228 96 54 12 30"},
+  "client": {"name": "Translog Afrique SARL"},
+  "object": "Entretien périodique de deux véhicules",
+  "delivery": "48 heures",
+  "validity_days": 10,
+  "sections": [{"title": "Prestations", "show_subtotal": true, "lines": [
+    {"label": "Kit d'entretien complet", "quantity": 2, "unit": "véhicule", "unit_price": 175000},
+    {"label": "Diagnostic électronique", "quantity": 1, "unit": "forfait", "unit_price": 95000}
+  ]}],
+  "adjustments": [],
+  "summary": "Disponibilité réservée pendant la durée de validité.",
+  "conditions": ["Ce document ne constitue pas une facture définitive.", "Règlement avant enlèvement des véhicules."],
+  "expected": {"items_total": 445000, "grand_total": 445000}
+}
