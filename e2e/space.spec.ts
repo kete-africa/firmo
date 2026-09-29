@@ -156,6 +156,13 @@ test('a share link opens one document for his client, until he removes it', asyn
 }) => {
   await signIn(context, A);
   await page.goto(`/espace/documents/${issuedId}`);
+  // An issued quote: its own answers, and it moves forward only.
+  await expect(page.getByText(/valable jusqu/)).toBeVisible();
+  await page.getByRole('button', { name: "Plus d'actions" }).click();
+  await expect(page.getByRole('button', { name: 'Marquer sans réponse' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Transformer en facture' })).toBeVisible();
+  await shot(page, '5-devis-emis');
+  await page.getByRole('button', { name: "Plus d'actions" }).click();
   await page.getByRole('button', { name: 'Partager' }).click();
   const url = await page.getByLabel('Lien de partage').inputValue();
   expect(url).toMatch(/\/d\/[\w-]{20,}$/);

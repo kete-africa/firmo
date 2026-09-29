@@ -77,7 +77,7 @@
   "document_clauses": "Clauses",
   "document_delivery": "Lead time",
   "document_deposit": "Deposit (%)",
-  "document_download": "Download the PDF",
+  "document_download": "Download",
   "document_issue": "Issue",
   "document_issue_confirm": "Issue this document? Its number will be final and it can no longer be changed.",
   "document_issue_refused": "The document changed or is incomplete: look at the preview again.",
@@ -200,5 +200,12 @@
   "type_short_proforma": "PRO",
   "type_short_quote": "QUO",
   "chat_privacy_note": "Your voice notes and photos are not kept: I only keep what I read from them, in your space. Your prices serve your documents only.",
-  "document_not_found": "This document cannot be found."
+  "document_not_found": "This document cannot be found.",
+  "state_paid": "Paid",
+  "state_to_pay": "To be paid",
+  "state_expired": "Expired",
+  "state_ordered": "Ordered",
+  "answer_ordered": "Mark ordered",
+  "answer_unanswered": "Mark unanswered",
+  "valid_until": "valid until {date}"
 }

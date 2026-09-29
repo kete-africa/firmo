@@ -335,6 +335,7 @@ export interface DocumentSummary {
   subject: string;
   clientName: string;
   documentDate: string;
+  validityDays: number;
   updatedAt: string;
 }
 
@@ -342,7 +343,8 @@ export async function listDocuments(tx: Transaction, limit: number): Promise<Doc
   const result = await rows(
     tx,
     sql`select id, type, state, number, subject, client_name, document_date::text as document_date,
-               updated_at from documents order by updated_at desc, id desc limit ${limit}`,
+               validity_days, updated_at
+        from documents order by updated_at desc, id desc limit ${limit}`,
   );
   return result.map((row) => ({
     id: Number(row.id),
@@ -352,6 +354,7 @@ export async function listDocuments(tx: Transaction, limit: number): Promise<Doc
     subject: String(row.subject),
     clientName: String(row.client_name),
     documentDate: String(row.document_date),
+    validityDays: Number(row.validity_days),
     updatedAt: new Date(String(row.updated_at)).toISOString(),
   }));
 }

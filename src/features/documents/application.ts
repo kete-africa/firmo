@@ -26,6 +26,7 @@ import {
   type Header,
 } from './domain/presentation';
 import { confirms, SnapshotError } from './domain/snapshot';
+import { canConvert, canRevise, nextAnswers } from './domain/lifecycle';
 import type { DocumentState, DocumentType } from './domain/types';
 import * as repo from './infrastructure/repository';
 import type { DocumentFiles, DocumentRenderer } from './ports';
@@ -390,12 +391,7 @@ export function createDocuments(deps: DocumentsDeps) {
       return inOrganization(actor.organizationId, async (tx) => {
         const source = await repo.loadDocument(tx, id, { lock: true });
         if (!source) throw notFound();
-        const allowed: Record<DocumentType, DocumentType[]> = {
-          quote: ['proforma', 'invoice'],
-          proforma: ['invoice'],
-          invoice: [],
-        };
-        if (source.state === 'draft' || !allowed[source.type].includes(target)) {
+        if (!canConvert(source.type, source.state, target)) {
           throw new DocumentError('not_available', 409);
         }
         const draft = repo.draftFromStored(source, target);
@@ -416,7 +412,7 @@ export function createDocuments(deps: DocumentsDeps) {
       return inOrganization(actor.organizationId, async (tx) => {
         const source = await repo.loadDocument(tx, id, { lock: true });
         if (!source) throw notFound();
-        if (source.state === 'draft') throw new DocumentError('not_available', 409);
+        if (!canRevise(source.type, source.state)) throw new DocumentError('not_available', 409);
         const rootId = source.rootDocumentId ?? source.id;
         const revision = await repo.nextRevision(tx, rootId);
         const draft = repo.draftFromStored(source, source.type);
@@ -441,7 +437,9 @@ export function createDocuments(deps: DocumentsDeps) {
       await inOrganization(actor.organizationId, async (tx) => {
         const document = await repo.loadDocument(tx, id, { lock: true });
         if (!document) throw notFound();
-        if (document.state !== 'issued') throw new DocumentError('not_available', 409);
+        if (!nextAnswers(document.type, document.state).includes(state)) {
+          throw new DocumentError('not_available', 409);
+        }
         await repo.setState(tx, id, state);
       });
     },

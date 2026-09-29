@@ -82,7 +82,19 @@ export function typeLabel(type: DocumentType): string {
   return { quote: m.type_quote(), proforma: m.type_proforma(), invoice: m.type_invoice() }[type];
 }
 
-export function stateLabel(state: DocumentState): string {
+/**
+ * What a document's state means for its type: an issued invoice is to be paid (or paid); a
+ * quote or proforma past its validity is expired; an accepted proforma was ordered.
+ */
+export function stateLabel(
+  state: DocumentState,
+  context: { type?: DocumentType; expired?: boolean; paid?: boolean } = {},
+): string {
+  if (context.type === 'invoice' && state === 'issued') {
+    return context.paid ? m.state_paid() : m.state_to_pay();
+  }
+  if (context.expired) return m.state_expired();
+  if (context.type === 'proforma' && state === 'accepted') return m.state_ordered();
   return {
     draft: m.state_draft(),
     issued: m.state_issued(),

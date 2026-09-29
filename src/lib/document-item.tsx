@@ -16,7 +16,13 @@ export function DocumentItem({ row }: { row: DocumentRow }) {
           <span className="block truncate font-semibold">{row.subject}</span>
           <span className="block truncate text-body-sm text-bark">
             {/* A draft has no number yet: its state says so. */}
-            {[row.number, row.clientName, stateLabel(row.state)].filter(Boolean).join(' · ')}
+            {[
+              row.number,
+              row.clientName,
+              stateLabel(row.state, { type: row.type, expired: row.expired }),
+            ]
+              .filter(Boolean)
+              .join(' · ')}
           </span>
         </span>
         <span aria-hidden="true" className="text-bark">

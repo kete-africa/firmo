@@ -4,6 +4,8 @@ import { z } from 'zod';
 import {
   calculateDocument,
   DocumentError,
+  isExpired,
+  validUntil,
   moneyToString,
   type Dec,
   type DocumentState,
@@ -33,6 +35,8 @@ function channelLinks() {
   };
 }
 
+const today = () => new Date().toISOString().slice(0, 10);
+
 const failure = (error: unknown) => {
   if (error instanceof DocumentError) return { ok: false as const, reason: error.code };
   throw error;
@@ -59,12 +63,16 @@ export interface DocumentRow {
   subject: string;
   clientName: string;
   updatedAt: string;
+  /** An issued quote or proforma past its validity without an answer. */
+  expired: boolean;
 }
 
 export const fetchDocuments = createServerFn({ method: 'GET' }).handler(async () => {
   const { actor } = await member();
   const rows = await services().documents.list(actor, 200);
+  const day = today();
   return rows.map((row): DocumentRow => ({
+    expired: isExpired(row.type, row.state, row.documentDate, row.validityDays, day),
     id: row.id,
     type: row.type,
     state: row.state,
@@ -142,6 +150,19 @@ export const fetchDocument = createServerFn({ method: 'GET' })
         address: document.clientAddress,
       },
       validityDays: document.validityDays,
+      validUntil: validUntil(document.type, document.documentDate, document.validityDays),
+      expired: isExpired(
+        document.type,
+        document.state,
+        document.documentDate,
+        document.validityDays,
+        today(),
+      ),
+      paid:
+        document.type === 'invoice' &&
+        document.state === 'issued' &&
+        totals !== null &&
+        totals.balanceDue === '0',
       site: document.site,
       delivery: document.delivery,
       warranty: document.warranty,

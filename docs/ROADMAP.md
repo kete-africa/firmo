@@ -159,7 +159,32 @@ The tradesman makes the document his, from his phone.
 
 ---
 
-## Phase 5 — Plans and quota · `specs/006-plans`
+## Phase 4.1 — Three document types · `specs/006-document-types` · _delivered_
+
+### Objective
+
+A quote, a proforma and an invoice are three documents with three purposes — never one document
+under three titles.
+
+### Scope
+
+- Each type prints what it is for: a quote proposes (validity, deposit, "bon pour accord"); a
+  proforma announces the invoice for the client's procedures (validity, deposit, no accounting
+  value, "bon pour commande"); an invoice claims payment (no validity nor requested deposit,
+  payments and balance, "pour acquit").
+- Each type lives its own life (`domain/lifecycle.ts`, migration 0007): a quote is accepted,
+  refused or left unanswered; a proforma is ordered or refused; an invoice is paid or cancelled,
+  never accepted nor revised. Conversion goes forward only.
+- The console and the chat say it: expired, ordered, to pay, paid; a quote by default in the chat.
+
+### Proof
+
+- `[agent]` Lifecycle and printing per type (unit); refusals held by the code and the database
+  (integration).
+
+---
+
+## Phase 5 — Plans and quota · `specs/007-plans`
 
 ### Objective
 
@@ -181,7 +206,7 @@ Firmo is paid through the Compte Kete, and never gives more than what was bought
 
 ---
 
-## Phase 6 — Operations and Kete · `specs/007-operations`
+## Phase 6 — Operations and Kete · `specs/008-operations`
 
 ### Objective
 
@@ -202,7 +227,7 @@ Kete operators run Firmo; Kete Cockpit sees it live.
 
 ---
 
-## Phase 7 — Staging · `specs/008-staging`
+## Phase 7 — Staging · `specs/009-staging`
 
 ### Objective
 

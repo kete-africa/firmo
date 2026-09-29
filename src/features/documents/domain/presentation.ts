@@ -54,9 +54,20 @@ export function capitalizeInitial(value: string): string {
   return trimmed ? trimmed.charAt(0).toLocaleUpperCase('fr') + trimmed.slice(1) : trimmed;
 }
 
+/**
+ * What each type is for — and so what it prints:
+ * - a quote proposes a price, valid for a time, accepted by the client's signature;
+ * - a proforma announces the invoice for the client's own procedures (a budget, a bank, customs):
+ *   valid for a time, it may request a deposit, and has no accounting value;
+ * - an invoice claims payment: no validity, no requested deposit — the payments received and the
+ *   balance due speak instead.
+ */
+export const PROFORMA_MENTION = 'Facture proforma : document sans valeur comptable.';
+
 function conditions(facts: DocumentFacts): { title: string; body: string; position: number }[] {
   const list = facts.clauses.map((clause, position) => ({ ...clause, position }));
   const extra: [string, string][] = [];
+  if (facts.type === 'proforma') extra.push(['Proforma', PROFORMA_MENTION]);
   if (facts.warranty?.trim()) extra.push(['Garantie', `Garantie : ${facts.warranty.trim()}`]);
   for (const body of (facts.assumptions ?? '').split(/\r?\n/)) {
     if (body.trim()) extra.push(['Condition', body.trim()]);
@@ -75,6 +86,7 @@ function conditions(facts: DocumentFacts): { title: string; body: string; positi
 export function documentPayload(facts: DocumentFacts, header: Header): Record<string, unknown> {
   const calculation = calculateDocument(facts.draft);
   const issuerName = header.name.trim() || 'Atelier';
+  const invoice = facts.type === 'invoice';
   return {
     type: facts.type,
     date: facts.date,
@@ -99,7 +111,7 @@ export function documentPayload(facts: DocumentFacts, header: Header): Record<st
       address: facts.client.address ?? null,
     },
     object: facts.subject,
-    validity_days: facts.validityDays,
+    validity_days: invoice ? null : facts.validityDays,
     site: facts.site ?? null,
     delivery: facts.delivery ?? null,
     warranty: facts.warranty ?? null,
@@ -139,7 +151,7 @@ export function documentPayload(facts: DocumentFacts, header: Header): Record<st
       facts.draft.taxRate && !facts.draft.taxRate.isZero()
         ? decimalText(facts.draft.taxRate)
         : null,
-    deposit_percent: decimalText(facts.draft.depositPercent),
+    deposit_percent: invoice ? null : decimalText(facts.draft.depositPercent),
     payments: facts.payments.map((payment) => ({
       amount: moneyToString(payment.amount),
       paid_on: payment.paidOn,
@@ -153,9 +165,11 @@ export function documentPayload(facts: DocumentFacts, header: Header): Record<st
     tax_amount: calculation.taxAmount.isZero() ? null : moneyToString(calculation.taxAmount),
     grand_total: moneyToString(calculation.grandTotal),
     deposit_requested:
-      calculation.depositRequested === null ? null : moneyToString(calculation.depositRequested),
+      invoice || calculation.depositRequested === null
+        ? null
+        : moneyToString(calculation.depositRequested),
     indicative_after_deposit:
-      calculation.indicativeAfterDeposit === null
+      invoice || calculation.indicativeAfterDeposit === null
         ? null
         : moneyToString(calculation.indicativeAfterDeposit),
     paid_total: moneyToString(calculation.paidTotal),
@@ -181,10 +195,29 @@ export function issuedSnapshot(
   });
 }
 
-const TYPE_LABELS: Record<DocumentType, string> = {
-  quote: 'DEVIS',
-  proforma: 'PROFORMA',
-  invoice: 'FACTURE',
+/** How each type presents itself on paper: its title, its total, what the signature says. */
+const TYPE_PRINT: Record<
+  DocumentType,
+  { title: string; signature: string; hint: string; total: string | null }
+> = {
+  quote: {
+    title: 'DEVIS',
+    signature: 'BON POUR ACCORD',
+    hint: 'Date, nom et signature du client',
+    total: null,
+  },
+  proforma: {
+    title: 'FACTURE PROFORMA',
+    signature: 'BON POUR COMMANDE',
+    hint: 'Date, nom, signature et cachet du client',
+    total: null,
+  },
+  invoice: {
+    title: 'FACTURE',
+    signature: 'POUR ACQUIT',
+    hint: "Cachet et signature de l'émetteur",
+    total: 'NET À PAYER',
+  },
 };
 
 const ORIGIN_LABELS: Record<DocumentType, string> = {
@@ -216,9 +249,15 @@ export function renderInput(
   const type = String(document.type) as DocumentType;
   const origin = document.origin ? asRecord(document.origin) : null;
   const [year, month, day] = String(document.date).split('-');
+  const print = TYPE_PRINT[type];
+  const taxed = document.tax_rate !== null && document.tax_rate !== undefined;
   return {
     ...document,
-    type: TYPE_LABELS[type],
+    type: print.title,
+    signature_label: print.signature,
+    signature_hint: print.hint,
+    // With a tax the template says TOTAL TTC; an invoice without tax says what is owed.
+    ...(print.total && !taxed ? { total_label: print.total } : {}),
     number: options.number,
     date: `${day}.${month}.${year}`,
     issuer: { ...issuer, logo: options.logoPath ?? null, nif: issuer.tax_id ?? null },
