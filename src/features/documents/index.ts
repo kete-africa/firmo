@@ -30,6 +30,9 @@ export {
   RenderingError,
   type DocumentFiles,
   type DocumentRenderer,
+  type IssuanceGate,
+  type IssuanceVerdict,
+  type IssuedCount,
   type RenderedPdf,
 } from './ports';
 export {

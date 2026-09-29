@@ -207,5 +207,20 @@
   "state_ordered": "Ordered",
   "answer_ordered": "Mark ordered",
   "answer_unanswered": "Mark unanswered",
-  "valid_until": "valid until {date}"
+  "valid_until": "valid until {date}",
+  "chat_plan_required": "Your 3 free documents are used. To issue this one, subscribe to Firmo: {url}\nThe link works once and expires in 10 minutes. Then answer “yes” and I issue it.",
+  "chat_quota_reached": "You issued your 30 documents of the last 30 days. Your subscription and what comes next: {url}\nThe link works once and expires in 10 minutes.",
+  "chat_plans_unavailable": "I cannot check your subscription right now. Your document stays ready: say “yes” again in a moment.",
+  "plan_title": "Your subscription",
+  "plan_link": "My subscription",
+  "plan_free": "Free documents left: {remaining} of {free}.",
+  "plan_subscribed": "Firmo is active until {until}. Documents left in the current period: {remaining}.",
+  "plan_required": "Your {free} free documents are used. Subscribe to issue again; your drafts stay.",
+  "plan_unavailable": "Your subscription cannot be read right now. Try again in a moment.",
+  "plan_offer": "The Firmo offer: {documents} issued documents per {days}-day period. Drafts, previews and corrections do not count.",
+  "plan_subscribe": "Subscribe to Firmo",
+  "plan_manage": "Manage my subscription",
+  "plan_where_paid": "Payment happens in your Compte Kete, which gathers your Kete subscriptions.",
+  "document_plan_required": "Your free documents are used: subscribe to issue this one. It stays a draft.",
+  "document_quota_reached": "You issued all the documents of your current period. This one stays a draft."
 }

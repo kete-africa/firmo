@@ -101,7 +101,9 @@ export const changeDraftArgs = z.object({
 
 export const removeFromDraftArgs = z.object({ ids: z.array(z.string()) });
 export const issuerNameArgs = z.object({ name: z.string() });
-export const openSpaceArgs = z.object({ page: z.enum(['home', 'documents', 'presentation']) });
+export const openSpaceArgs = z.object({
+  page: z.enum(['home', 'documents', 'presentation', 'subscription']),
+});
 export const convertArgs = z.object({ target: z.enum(['proforma', 'invoice']) });
 export const findArgs = z.object({ query: z.string() });
 export const noArgs = z.object({});
@@ -164,7 +166,7 @@ export const TOOLS = {
   open_space: {
     args: openSpaceArgs,
     description:
-      'Envoie un lien à usage unique vers son espace Firmo : accueil, documents, ou présentation (nom, logo, couleur, conditions, numérotation).',
+      'Envoie un lien à usage unique vers son espace Firmo : accueil, documents, présentation (nom, logo, couleur, conditions, numérotation), ou abonnement (où elle en est, s’abonner à Firmo).',
   },
 } as const;
 

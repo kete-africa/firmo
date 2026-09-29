@@ -207,5 +207,20 @@
   "state_ordered": "Commandée",
   "answer_ordered": "Marquer commandée",
   "answer_unanswered": "Marquer sans réponse",
-  "valid_until": "valable jusqu’au {date}"
+  "valid_until": "valable jusqu’au {date}",
+  "chat_plan_required": "Tes 3 documents offerts sont utilisés. Pour émettre celui-ci, abonne-toi à Firmo : {url}\nLe lien ne sert qu'une fois et expire dans 10 minutes. Ensuite, réponds « oui » et je l'émets.",
+  "chat_quota_reached": "Tu as émis tes 30 documents de ces 30 derniers jours. Ton abonnement et la suite : {url}\nLe lien ne sert qu'une fois et expire dans 10 minutes.",
+  "chat_plans_unavailable": "Je ne peux pas vérifier ton abonnement pour l'instant. Ton document reste prêt : réessaie « oui » dans un instant.",
+  "plan_title": "Ton abonnement",
+  "plan_link": "Mon abonnement",
+  "plan_free": "Documents offerts restants : {remaining} sur {free}.",
+  "plan_subscribed": "Firmo est actif jusqu'au {until}. Documents restants sur la période en cours : {remaining}.",
+  "plan_required": "Tes {free} documents offerts sont utilisés. Abonne-toi pour émettre à nouveau ; tes brouillons restent.",
+  "plan_unavailable": "Ton abonnement ne peut pas être lu pour l'instant. Réessaie dans un instant.",
+  "plan_offer": "L'offre Firmo : {documents} documents émis par période de {days} jours. Les brouillons, les aperçus et les corrections ne comptent pas.",
+  "plan_subscribe": "S'abonner à Firmo",
+  "plan_manage": "Gérer mon abonnement",
+  "plan_where_paid": "Le paiement se fait dans ton Compte Kete, qui réunit tes abonnements Kete.",
+  "document_plan_required": "Tes documents offerts sont utilisés : abonne-toi pour émettre celui-ci. Il reste en brouillon.",
+  "document_quota_reached": "Tu as émis tous les documents de ta période en cours. Celui-ci reste en brouillon."
 }

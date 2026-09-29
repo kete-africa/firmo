@@ -12,6 +12,8 @@ import {
   type DocumentType,
   type DraftInput,
 } from '@/features/documents';
+import { FREE_DOCUMENTS, PERIOD_DAYS, PERIOD_DOCUMENTS } from '@/features/plans';
+import { env } from '@/platform/env';
 import { services } from '@/platform/services';
 import { currentMember } from '@/platform/signin';
 
@@ -478,3 +480,36 @@ export const saveNumbering = createServerFn({ method: 'POST' })
       return failure(error);
     }
   });
+
+export interface PlanView {
+  /** `unavailable`: the Compte Kete did not answer; nothing is guessed. */
+  kind: 'free' | 'subscribed' | 'plan_required' | 'unavailable';
+  remaining: number | null;
+  until: string | null;
+  free: number;
+  period: { documents: number; days: number };
+  /** The Compte Kete's subscriptions, where the payment happens. */
+  subscribeUrl: string;
+}
+
+/** Where his organization stands with Firmo's plans (spec 007). */
+export const fetchPlan = createServerFn({ method: 'GET' }).handler(async (): Promise<PlanView> => {
+  const { actor } = await member();
+  const { plans, documents } = services();
+  const base = {
+    free: FREE_DOCUMENTS,
+    period: { documents: PERIOD_DOCUMENTS, days: PERIOD_DAYS },
+    subscribeUrl: `${env.accountUrl}/espace/abonnements`,
+  };
+  try {
+    const standing = await plans.standing(actor, documents.issued(actor));
+    return {
+      ...base,
+      kind: standing.kind,
+      remaining: standing.kind === 'plan_required' ? 0 : standing.remaining,
+      until: standing.kind === 'subscribed' ? standing.until.slice(0, 10) : null,
+    };
+  } catch {
+    return { ...base, kind: 'unavailable', remaining: null, until: null };
+  }
+});

@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
+import type { Transaction } from '@/platform/db';
 import { inOrganization } from '@/platform/tenancy';
 import {
   draftInput,
@@ -29,7 +30,7 @@ import { confirms, SnapshotError } from './domain/snapshot';
 import { canConvert, canRevise, nextAnswers } from './domain/lifecycle';
 import type { DocumentState, DocumentType } from './domain/types';
 import * as repo from './infrastructure/repository';
-import type { DocumentFiles, DocumentRenderer } from './ports';
+import type { DocumentFiles, DocumentRenderer, IssuanceGate, IssuedCount } from './ports';
 
 /**
  * The documents feature's use cases. Every one runs inside the actor's organization, which comes
@@ -42,6 +43,8 @@ export interface Actor {
 export interface DocumentsDeps {
   renderer: DocumentRenderer;
   files: DocumentFiles;
+  /** Firmo's plans; without one (tests, tools), every issuance is allowed. */
+  gate?: IssuanceGate;
   now?: () => Date;
 }
 
@@ -55,8 +58,11 @@ export class DocumentError extends Error {
       | 'draft_changed'
       | 'not_issuable'
       | 'number_taken'
-      | 'not_available',
-    readonly status: 400 | 404 | 409 | 422,
+      | 'not_available'
+      | 'plan_required'
+      | 'quota_reached'
+      | 'plans_unavailable',
+    readonly status: 400 | 402 | 404 | 409 | 422 | 503,
     readonly field?: string,
   ) {
     super(code);
@@ -64,6 +70,13 @@ export class DocumentError extends Error {
 }
 
 const notFound = () => new DocumentError('not_found', 404);
+
+function issuedCount(tx: Transaction): IssuedCount {
+  return {
+    total: () => repo.countFirstIssuances(tx),
+    since: (date, excludingFirst) => repo.countFirstIssuances(tx, { since: date, excludingFirst }),
+  };
+}
 
 function parse<T>(
   schema: { safeParse(input: unknown): { success: true; data: T } | { success: false } },
@@ -250,6 +263,16 @@ export function createDocuments(deps: DocumentsDeps) {
       return { sha256: snapshot.sha256, pdf: rendered.pdf };
     },
 
+    /** The organization's first issuances, counted each in its own read. */
+    issued(actor: Actor): IssuedCount {
+      const read = <T>(work: (count: IssuedCount) => Promise<T>) =>
+        inOrganization(actor.organizationId, (tx) => work(issuedCount(tx)));
+      return {
+        total: () => read((count) => count.total()),
+        since: (date, excludingFirst) => read((count) => count.since(date, excludingFirst)),
+      };
+    },
+
     /** The hash of the current preview, without rendering it (the PDF is the same snapshot). */
     async previewHash(actor: Actor, id: number): Promise<string> {
       return (await currentSnapshot(actor, id)).snapshot.sha256;
@@ -291,6 +314,13 @@ export function createDocuments(deps: DocumentsDeps) {
           throw new DocumentError('not_issuable', 409);
         }
         if (!confirms(preview, confirmation.sha256)) throw new DocumentError('draft_changed', 409);
+        if (deps.gate && document.revision === 1) {
+          await repo.lockIssuances(tx, actor.organizationId);
+          const verdict = await deps.gate.admit(actor, issuedCount(tx));
+          if (verdict !== 'allowed') {
+            throw new DocumentError(verdict, verdict === 'plans_unavailable' ? 503 : 402);
+          }
+        }
 
         const issuedAt = now();
         const year = counterYear('annual', new Date(`${document.documentDate}T00:00:00Z`));

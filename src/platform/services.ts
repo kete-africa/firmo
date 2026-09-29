@@ -5,6 +5,7 @@ import {
 } from '@/features/conversation';
 import { createDocuments, type Documents } from '@/features/documents';
 import { createIdentity, type Identity } from '@/features/identity';
+import { createPlans, type Plans } from '@/features/plans';
 import { accountDirectory } from './account';
 import { env } from './env';
 import { getStorage } from './files';
@@ -42,25 +43,34 @@ export function configuredChannels(): Partial<Record<'whatsapp' | 'telegram', Me
 
 /** Firmo's use cases wired to their adapters, created on first use. */
 let wired:
-  { documents: Documents; identity: Identity; conversation: Conversation | null } | undefined;
+  | {
+      documents: Documents;
+      identity: Identity;
+      plans: Plans;
+      conversation: Conversation | null;
+    }
+  | undefined;
 
 export function services() {
   if (!wired) {
-    const documents = createDocuments({ renderer: typstRenderer(), files: getStorage() });
-    const identity = createIdentity({
-      directory: accountDirectory({
-        accountUrl: env.accountUrl,
-        clientId: env.clientId,
-        clientSecret: env.clientSecret,
-      }),
-      publicUrl: env.publicUrl,
+    const account = accountDirectory({
+      accountUrl: env.accountUrl,
+      clientId: env.clientId,
+      clientSecret: env.clientSecret,
     });
+    const plans = createPlans({ subscriptions: account });
+    const documents = createDocuments({
+      renderer: typstRenderer(),
+      files: getStorage(),
+      gate: plans.gate,
+    });
+    const identity = createIdentity({ directory: account, publicUrl: env.publicUrl });
     const channels = configuredChannels();
     const conversation =
       process.env.OPENAI_API_KEY && Object.keys(channels).length > 0
         ? createConversation({ model: openaiModel(), channels, identity, documents })
         : null;
-    wired = { documents, identity, conversation };
+    wired = { documents, identity, plans, conversation };
   }
   return wired;
 }

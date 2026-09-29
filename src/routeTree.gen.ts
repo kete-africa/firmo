@@ -19,6 +19,7 @@ import { Route as AuthConnexionRouteImport } from './routes/auth/connexion'
 import { Route as AuthSortieRouteImport } from './routes/auth/sortie'
 import { Route as DTokenRouteImport } from './routes/d/$token'
 import { Route as EspaceIndexRouteImport } from './routes/espace/index'
+import { Route as EspaceAbonnementRouteImport } from './routes/espace/abonnement'
 import { Route as EspacePresentationRouteImport } from './routes/espace/presentation'
 import { Route as WebhooksTelegramRouteImport } from './routes/webhooks/telegram'
 import { Route as WebhooksWhatsappRouteImport } from './routes/webhooks/whatsapp'
@@ -78,6 +79,11 @@ const EspaceIndexRoute = EspaceIndexRouteImport.update({
   path: '/',
   getParentRoute: () => EspaceRoute,
 } as any)
+const EspaceAbonnementRoute = EspaceAbonnementRouteImport.update({
+  id: '/abonnement',
+  path: '/abonnement',
+  getParentRoute: () => EspaceRoute,
+} as any)
 const EspacePresentationRoute = EspacePresentationRouteImport.update({
   id: '/presentation',
   path: '/presentation',
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
   '/d/$token': typeof DTokenRoute
+  '/espace/abonnement': typeof EspaceAbonnementRoute
   '/espace/presentation': typeof EspacePresentationRoute
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
   '/d/$token': typeof DTokenRoute
+  '/espace/abonnement': typeof EspaceAbonnementRoute
   '/espace/presentation': typeof EspacePresentationRoute
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
@@ -169,6 +177,7 @@ export interface FileRoutesById {
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
   '/d/$token': typeof DTokenRoute
+  '/espace/abonnement': typeof EspaceAbonnementRoute
   '/espace/presentation': typeof EspacePresentationRoute
   '/webhooks/telegram': typeof WebhooksTelegramRoute
   '/webhooks/whatsapp': typeof WebhooksWhatsappRoute
@@ -191,6 +200,7 @@ export interface FileRouteTypes {
     | '/auth/connexion'
     | '/auth/sortie'
     | '/d/$token'
+    | '/espace/abonnement'
     | '/espace/presentation'
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/auth/connexion'
     | '/auth/sortie'
     | '/d/$token'
+    | '/espace/abonnement'
     | '/espace/presentation'
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/auth/connexion'
     | '/auth/sortie'
     | '/d/$token'
+    | '/espace/abonnement'
     | '/espace/presentation'
     | '/webhooks/telegram'
     | '/webhooks/whatsapp'
@@ -330,6 +342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EspaceIndexRouteImport
       parentRoute: typeof EspaceRoute
     }
+    '/espace/abonnement': {
+      id: '/espace/abonnement'
+      path: '/abonnement'
+      fullPath: '/espace/abonnement'
+      preLoaderRoute: typeof EspaceAbonnementRouteImport
+      parentRoute: typeof EspaceRoute
+    }
     '/espace/presentation': {
       id: '/espace/presentation'
       path: '/presentation'
@@ -390,6 +409,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface EspaceRouteChildren {
+  EspaceAbonnementRoute: typeof EspaceAbonnementRoute
   EspacePresentationRoute: typeof EspacePresentationRoute
   EspaceIndexRoute: typeof EspaceIndexRoute
   EspaceDocumentsIdRoute: typeof EspaceDocumentsIdRoute
@@ -397,6 +417,7 @@ interface EspaceRouteChildren {
 }
 
 const EspaceRouteChildren: EspaceRouteChildren = {
+  EspaceAbonnementRoute: EspaceAbonnementRoute,
   EspacePresentationRoute: EspacePresentationRoute,
   EspaceIndexRoute: EspaceIndexRoute,
   EspaceDocumentsIdRoute: EspaceDocumentsIdRoute,

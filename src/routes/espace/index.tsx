@@ -21,6 +21,9 @@ function Home() {
       <div className="flex flex-col gap-3 px-4">
         <h1 className="font-display text-headline font-bold">{m.home_title_documents()}</h1>
         <p className="text-body text-bark">{m.home_intro()}</p>
+        <Link to="/espace/abonnement" className="text-body-sm font-semibold underline">
+          {m.plan_link()}
+        </Link>
         {chatUrl ? (
           <a
             href={chatUrl}

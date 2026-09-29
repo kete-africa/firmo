@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { Transaction } from '@/platform/db';
 import type { WorkingDraft } from '../draft';
-import type { Channel } from '../ports';
+import type { Channel, TurnUsage } from '../ports';
 
 /** One conversation per sender and channel, in its organization (RLS). */
 export interface ConversationState {
@@ -43,4 +43,23 @@ export async function saveConversation(tx: Transaction, state: ConversationState
       history = ${JSON.stringify(state.history.slice(-12))}::jsonb,
       updated_at = now()
     where id = ${state.id}`);
+}
+
+/** What the model cost for one turn, and the document it worked on — counts only (spec 007). */
+export async function recordUsage(
+  tx: Transaction,
+  input: {
+    organizationId: string;
+    channel: Channel;
+    documentId: number | null;
+    usage: readonly TurnUsage[];
+  },
+): Promise<void> {
+  if (input.usage.length === 0) return;
+  const sum = (key: keyof TurnUsage) => input.usage.reduce((total, u) => total + u[key], 0);
+  await tx.execute(sql`
+    insert into ai_usage
+      (organization_id, channel, document_id, model_calls, input_tokens, output_tokens)
+    values (${input.organizationId}, ${input.channel}, ${input.documentId},
+            ${sum('modelCalls')}, ${sum('inputTokens')}, ${sum('outputTokens')})`);
 }
