@@ -1,8 +1,13 @@
 import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { openaiModel } from '@/platform/openai';
-import { parseUpdate, secretIsValid } from '@/platform/telegram';
-import { parseNotification, signatureIsValid, verifySubscription } from '@/platform/whatsapp';
+import { parseUpdate, secretIsValid, telegramChannel } from '@/platform/telegram';
+import {
+  parseNotification,
+  signatureIsValid,
+  verifySubscription,
+  whatsappChannel,
+} from '@/platform/whatsapp';
 
 // Phase 3: the channels only accept what they can prove, and the model's tool loop is faithful.
 
@@ -187,5 +192,71 @@ describe('the model adapter', () => {
       ],
       text: { format: { type: 'json_schema', name: 'firmo_turn', schema, strict: true } },
     });
+  });
+});
+
+describe('what the channels send (spec 011)', () => {
+  function recordingFetch() {
+    const calls: { url: string; body: Record<string, unknown> }[] = [];
+    const fetch = (async (url: string, init?: { body?: unknown }) => {
+      calls.push({
+        url: String(url),
+        body:
+          typeof init?.body === 'string' ? (JSON.parse(init.body) as Record<string, unknown>) : {},
+      });
+      return new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+    return { fetch, calls };
+  }
+  const incoming = {
+    channel: 'whatsapp' as const,
+    providerMessageId: 'wamid.1',
+    sender: '22890000000',
+    displayName: null,
+    kind: 'text' as const,
+    text: 'bonjour',
+  };
+
+  it('WhatsApp: marks her message read with « en train d’écrire »', async () => {
+    const { fetch, calls } = recordingFetch();
+    const channel = whatsappChannel({
+      accessToken: 't',
+      phoneNumberId: 'p',
+      appSecret: 's',
+      verifyToken: 'v',
+      fetch,
+    });
+    channel.typing?.(incoming)();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(calls[0]?.body).toEqual({
+      messaging_product: 'whatsapp',
+      status: 'read',
+      message_id: 'wamid.1',
+      typing_indicator: { type: 'text' },
+    });
+  });
+
+  it('WhatsApp: a text too long for buttons goes first, the buttons after it', async () => {
+    const { fetch, calls } = recordingFetch();
+    const channel = whatsappChannel({
+      accessToken: 't',
+      phoneNumberId: 'p',
+      appSecret: 's',
+      verifyToken: 'v',
+      fetch,
+    });
+    await channel.sendText('22890000000', 'x'.repeat(1100), [
+      { id: 'draft:final', label: 'Document final' },
+    ]);
+    expect(calls.map((c) => c.body.type)).toEqual(['text', 'interactive']);
+  });
+
+  it('Telegram: « en train d’écrire » in her chat', async () => {
+    const { fetch, calls } = recordingFetch();
+    const channel = telegramChannel({ botToken: 'b', webhookSecret: 'w', fetch });
+    channel.typing?.({ ...incoming, channel: 'telegram', sender: '777' })();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(calls[0]?.url).toContain('/sendChatAction');
+    expect(calls[0]?.body).toEqual({ chat_id: '777', action: 'typing' });
   });
 });

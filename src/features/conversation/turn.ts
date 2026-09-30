@@ -59,6 +59,7 @@ export const ACTIONS = [
   'propose_issue',
   'confirm_issue',
   'cancel_issue',
+  'undo_last_change',
   'send_pdf',
   'convert_to_proforma',
   'convert_to_invoice',

@@ -165,6 +165,16 @@ export function telegramChannel(options: TelegramOptions): MessagingChannel {
         mediaType: media.mediaType ?? 'application/octet-stream',
       };
     },
+    typing(message) {
+      // Telegram shows it for five seconds: it is renewed until Firmo answers.
+      const show = () =>
+        void call('sendChatAction', { chat_id: message.sender, action: 'typing' }).catch(
+          () => undefined,
+        );
+      show();
+      const timer = setInterval(show, 4500);
+      return () => clearInterval(timer);
+    },
     async acknowledgeAction(message) {
       const id = message.providerMessageId.startsWith('cb:')
         ? message.providerMessageId.slice(3)

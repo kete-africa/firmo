@@ -1,4 +1,4 @@
-import { DocumentError, type Documents } from '@/features/documents';
+import { canConvert, DocumentError, type Documents } from '@/features/documents';
 import type { Identity, SenderProof } from '@/features/identity';
 import * as m from '@/paraglide/messages.js';
 import type { Transaction } from '@/platform/db';
@@ -56,6 +56,12 @@ type Outgoing =
 
 export const ISSUE_CONFIRM = 'issue:confirm';
 export const ISSUE_CANCEL = 'issue:cancel';
+/** The buttons under a complete draft, and under an issued document (spec 011). */
+export const SHOW_PREVIEW = 'draft:preview';
+export const FINAL_DOCUMENT = 'draft:final';
+export const EDIT_DRAFT = 'draft:edit';
+export const TO_INVOICE = 'doc:invoice';
+export const NEW_DOCUMENT = 'doc:new';
 /** Refusals of the plans (spec 007): the code answers them, with the way to subscribe. */
 const PLAN_REFUSALS = new Set(['plan_required', 'quota_reached', 'plans_unavailable']);
 /** The exchanges the model reads: enough for a document, never a past document's prices. */
@@ -229,9 +235,15 @@ export function createConversation(deps: ConversationDeps) {
       const turn = createTurn({ deps, locale, actor, personId: sender.personId, state });
 
       if (message.kind === 'action') {
+        // A button runs its action at once, without the model.
         await channel.acknowledgeAction?.(message);
-        if (message.action === ISSUE_CONFIRM) await turn.confirmIssue();
-        else if (message.action === ISSUE_CANCEL) turn.cancelIssue(true);
+        const stopTyping = channel.typing?.(message) ?? (() => undefined);
+        try {
+          await turn.press(message.action ?? '');
+        } finally {
+          stopTyping();
+        }
+        turn.remember(`[${turn.buttonLabel(message.action ?? '')}]`);
         await inOrganization(actor.organizationId, (tx) => saveConversation(tx, turn.state));
         await deliver(channel, to, turn.outbox);
         return { organizationId: actor.organizationId, usage };
@@ -253,9 +265,15 @@ export function createConversation(deps: ConversationDeps) {
         ]),
         { role: 'person', text: await stateFor(actor, turn.state, text) },
       ];
-      const decision = await decide(messages, actor.organizationId, usage);
-      if (decision) await turn.apply(decision.output, decision.draft);
-      else turn.say(m.chat_fallback_reply({}, { locale }));
+      const stopTyping = channel.typing?.(message) ?? (() => undefined);
+      try {
+        const decision = await decide(messages, actor.organizationId, usage);
+        if (decision) {
+          await turn.apply(decision.output, decision.draft, { first: sender.status === 'new' });
+        } else turn.say(m.chat_fallback_reply({}, { locale }));
+      } finally {
+        stopTyping();
+      }
       // Said at first use, not buried in terms: what is kept, and what is not.
       if (sender.status === 'new') turn.say(m.chat_privacy_note({}, { locale }));
       turn.remember(text);
@@ -291,6 +309,18 @@ export function sinceText(from: string, to: Date): string {
   return `il y a ${Math.round(hours / 24)} jours`;
 }
 
+/** The action of a pressed button, as if the model had decided it. */
+function action(name: TurnOutput['action']): TurnOutput {
+  return {
+    reply: '',
+    draft: null,
+    new_document: false,
+    issuer_name: null,
+    action: name,
+    document_number: null,
+  };
+}
+
 /** A missing element, as the model and the person read it. */
 function describeMissing(item: Missing): string {
   if (item.kind === 'quantity') return `quantité de « ${item.label} »`;
@@ -315,6 +345,10 @@ function createTurn(input: {
   /** The code asked or answered itself: the model's reply would repeat it. */
   let codeAnswered = false;
   let issuedId: number | null = null;
+  /** The document issued this turn: what the next buttons offer. */
+  let justIssued: { type: 'quote' | 'proforma' | 'invoice'; client: string } | null = null;
+  let previewSent = false;
+  let undone = false;
 
   const typeLabel = (type: 'quote' | 'proforma' | 'invoice') =>
     ({
@@ -333,6 +367,7 @@ function createTurn(input: {
 
   function resetDocument() {
     state.draft = null;
+    state.previousDraft = null;
     state.documentId = null;
     state.pendingIssue = null;
     // A new document starts a new exchange: a past document's prices never reach the next one.
@@ -374,6 +409,7 @@ function createTurn(input: {
   }
 
   function sendPreview(pdf: Uint8Array) {
+    previewSent = true;
     outbox.push({
       kind: 'document',
       pdf,
@@ -416,6 +452,7 @@ function createTurn(input: {
         ),
       });
       issuedId = pending.documentId;
+      justIssued = { type: document.type, client: document.clientName };
       resetDocument();
     } catch (error) {
       if (error instanceof DocumentError && PLAN_REFUSALS.has(error.code)) {
@@ -476,6 +513,19 @@ function createTurn(input: {
       case 'cancel_issue':
         state.pendingIssue = null;
         return;
+      case 'undo_last_change': {
+        if (!state.previousDraft) {
+          ask(m.chat_nothing_to_undo({}, { locale }));
+          return;
+        }
+        state.draft = state.previousDraft;
+        state.previousDraft = null;
+        state.pendingIssue = null;
+        draftChanged = true;
+        undone = true;
+        codeAnswered = true;
+        return;
+      }
       case 'send_pdf': {
         const document = await issuedDocument(output.document_number);
         if (!document?.number) {
@@ -525,35 +575,112 @@ function createTurn(input: {
     }
   }
 
+  /** The summary of a changed draft, first — after « c'est annulé » when it was an undo. */
+  function showSummary() {
+    if (!draftChanged || !state.draft) return;
+    outbox.unshift({ kind: 'text', text: summaryForPerson(state.draft, locale) });
+    if (undone) outbox.unshift({ kind: 'text', text: m.chat_undone({}, { locale }) });
+    draftChanged = false;
+  }
+
+  /**
+   * The next step as buttons (spec 011): after an issued document, what comes next; under a
+   * complete draft whose issuer is known, the preview and the final document. Never when the
+   * code already asked its own question.
+   */
+  async function offerNext() {
+    if (outbox.some((item) => item.kind === 'text' && item.actions?.length)) return;
+    let actions: OutboundAction[] = [];
+    if (justIssued) {
+      if (canConvert(justIssued.type, 'issued', 'invoice')) {
+        actions.push({ id: TO_INVOICE, label: m.chat_button_invoice({}, { locale }) });
+      }
+      actions.push({ id: NEW_DOCUMENT, label: m.chat_button_new({}, { locale }) });
+      outbox.push({
+        kind: 'text',
+        text: m.chat_issued_forward(
+          { type: typeLabel(justIssued.type), client: justIssued.client },
+          { locale },
+        ),
+        actions,
+      });
+      return;
+    }
+    if (codeAnswered || !state.draft || state.pendingIssue) return;
+    if (missingOf(state.draft).length > 0 || !(await deps.documents.profile(actor))) return;
+    actions = [
+      ...(previewSent ? [] : [{ id: SHOW_PREVIEW, label: m.chat_button_preview({}, { locale }) }]),
+      { id: FINAL_DOCUMENT, label: m.chat_button_final({}, { locale }) },
+      { id: EDIT_DRAFT, label: m.chat_button_edit({}, { locale }) },
+    ];
+    const last = outbox.at(-1);
+    if (last?.kind === 'text') last.actions = actions;
+    else outbox.push({ kind: 'text', text: m.chat_next_step({}, { locale }), actions });
+  }
+
   return {
     state,
     outbox,
     say,
-    confirmIssue,
-    cancelIssue(pressed: boolean) {
-      state.pendingIssue = null;
-      if (pressed) say(m.chat_issue_cancelled({}, { locale }));
-    },
     /** The document this turn worked on — to count what the model cost for each document. */
     workedOn: () => issuedId ?? state.pendingIssue?.documentId ?? state.documentId,
 
     /** The model's decision, applied in order: name, document, draft, action, then its reply. */
-    async apply(output: TurnOutput, draft: WorkingDraft | null) {
+    async apply(output: TurnOutput, draft: WorkingDraft | null, options: { first: boolean }) {
       const name = output.issuer_name?.trim();
       if (name) await deps.documents.setIssuerName(actor, name);
       if (output.new_document) resetDocument();
       if (draft && !sameDraft(draft, state.draft)) {
+        // The version before this change is what « annule » brings back.
+        state.previousDraft = state.draft;
         state.draft = draft;
         // A changed draft is not the one previewed: its proposal is void.
         state.pendingIssue = null;
         draftChanged = true;
       }
       await act(output);
-      if (draftChanged && state.draft) {
-        outbox.unshift({ kind: 'text', text: summaryForPerson(state.draft, locale) });
-      }
+      showSummary();
       const reply = output.reply.trim();
-      if (reply && !codeAnswered) say(reply);
+      // Her very first message, with nothing to price yet: Firmo presents itself with an example.
+      if (options.first && !draft && output.action === 'none') say(m.chat_welcome({}, { locale }));
+      else if (reply && !codeAnswered) say(reply);
+      await offerNext();
+    },
+
+    /** A pressed button: its action, run at once. */
+    async press(id: string) {
+      if (id === ISSUE_CONFIRM) await confirmIssue();
+      else if (id === ISSUE_CANCEL) {
+        state.pendingIssue = null;
+        say(m.chat_issue_cancelled({}, { locale }));
+      } else if (id === SHOW_PREVIEW) await act(action('show_preview'));
+      else if (id === FINAL_DOCUMENT) await act(action('propose_issue'));
+      else if (id === TO_INVOICE) await act(action('convert_to_invoice'));
+      else if (id === EDIT_DRAFT) {
+        ask(m.chat_edit_hint({}, { locale }));
+        return;
+      } else if (id === NEW_DOCUMENT) {
+        resetDocument();
+        ask(m.chat_new_document({}, { locale }));
+        return;
+      } else return;
+      showSummary();
+      await offerNext();
+    },
+
+    /** What a button said, for the conversation's memory. */
+    buttonLabel(id: string): string {
+      return (
+        {
+          [ISSUE_CONFIRM]: m.chat_issue_confirm_button({}, { locale }),
+          [ISSUE_CANCEL]: m.chat_issue_cancel_button({}, { locale }),
+          [SHOW_PREVIEW]: m.chat_button_preview({}, { locale }),
+          [FINAL_DOCUMENT]: m.chat_button_final({}, { locale }),
+          [EDIT_DRAFT]: m.chat_button_edit({}, { locale }),
+          [TO_INVOICE]: m.chat_button_invoice({}, { locale }),
+          [NEW_DOCUMENT]: m.chat_button_new({}, { locale }),
+        }[id] ?? id
+      );
     },
 
     /** The exchange, as the person saw it: links are never kept, documents by their caption. */

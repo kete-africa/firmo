@@ -7,6 +7,8 @@ import {
   ISSUE_CONFIRM,
   type ConversationMessage,
   type ConversationModel,
+  FINAL_DOCUMENT,
+  TO_INVOICE,
   type DraftOutput,
   type InboundMessage,
   type MessagingChannel,
@@ -50,6 +52,7 @@ function recordingChannel(channel: 'whatsapp' | 'telegram') {
     document?: string;
     contactAsked?: boolean;
   }[] = [];
+  const typing: string[] = [];
   const adapter: MessagingChannel = {
     channel,
     async sendText(to, text, actions) {
@@ -65,8 +68,12 @@ function recordingChannel(channel: 'whatsapp' | 'telegram') {
     async download() {
       return { bytes: new Uint8Array([1]), mediaType: 'audio/ogg' };
     },
+    typing() {
+      typing.push('shown');
+      return () => typing.push('stopped');
+    },
   };
-  return { adapter, sent };
+  return { adapter, sent, typing };
 }
 
 /** A structured output, with the fields a step leaves out at their neutral value. */
@@ -243,9 +250,11 @@ describe('a quote, from a sale said to an issued PDF', () => {
       [number],
     );
     const history = rows[0]?.history ?? [];
-    expect(history.map((h) => h.person)).toEqual(['envoie-moi le lien de mon espace']);
-    expect(history[0]?.firmo).toContain('[lien]');
-    expect(history[0]?.firmo).not.toContain('https://');
+    // What remains of the issued quote: the pressed button and the PDF — never its prices.
+    expect(history.map((h) => h.person)).toEqual(['[Émettre]', 'envoie-moi le lien de mon espace']);
+    expect(history.map((h) => h.firmo).join('\n')).not.toMatch(/18 000|Total/);
+    expect(history[1]?.firmo).toContain('[lien]');
+    expect(history[1]?.firmo).not.toContain('https://');
   });
 
   it('counts what the model cost, per turn and for the document it worked on', async () => {
@@ -381,6 +390,140 @@ describe('resuming, and starting over', () => {
     const third = read[2] ?? [];
     expect(third.map((m) => m.text).join('\n')).not.toContain('Tube 80x40');
     expect(third[0]?.text).toBe('je veux commencer un nouveau devis');
+  });
+});
+
+describe('a guided conversation (spec 011)', () => {
+  const authorDraft: DraftOutput = {
+    ...saleDraft,
+    sections: [
+      { title: 'Tube', show_subtotal: true, lines: [line('Tube', 'barre', 12, 18000)] },
+      { title: 'Tube annelé', show_subtotal: true, lines: [line('Tube annelé', null, 1, 140000)] },
+    ],
+    tax_rate: 18,
+    adjustments: [
+      { label: "Main-d'œuvre", kind: 'percent', value: 10, direction: 'add', base: 'items_total' },
+      { label: 'Réduction', kind: 'percent', value: 5, direction: 'subtract', base: 'items_total' },
+    ],
+  };
+  const pressed = (sender: string, id: string): InboundMessage => ({
+    ...text(sender, ''),
+    kind: 'action',
+    action: id,
+  });
+
+  it('shows every level of the total, and what each percentage is taken on', async () => {
+    const number = phone(20);
+    const { adapter, sent, typing } = recordingChannel('whatsapp');
+    const { model } = scriptedModel([{ draft: authorDraft, reply: 'C’est ajouté.' }]);
+    await createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    }).handle(text(number, 'Ajoute la main d’oeuvre à 10%, la TVA à 18%, une réduction de 5%'));
+    const summary = sent.find((s) => s.text?.startsWith('Brouillon'))?.text ?? '';
+    for (const level of [
+      '• Tube (barre) : 12 × 18 000 F CFA = 216 000 F CFA',
+      '• Tube annelé : 1 × 140 000 F CFA = 140 000 F CFA',
+      'Sous-total des postes : 356 000 F CFA',
+      "• Main-d'œuvre, 10 % du sous-total des postes : + 35 600 F CFA",
+      '• Réduction, 5 % du sous-total des postes : − 17 800 F CFA',
+      'Total HT : 373 800 F CFA',
+      'TVA 18 % : + 67 284 F CFA',
+      'Total TTC : 441 084 F CFA',
+    ]) {
+      expect(summary).toContain(level);
+    }
+    // Typing is shown while Firmo works, and stopped before it answers.
+    expect(typing).toEqual(['shown', 'stopped']);
+  });
+
+  it('greets a first message with an example, and asks the issuer name before any button', async () => {
+    const number = phone(21);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const { model } = scriptedModel([
+      { reply: 'Bonjour !' },
+      { draft: saleDraft, reply: 'Sous quel nom tes documents partent-ils ?' },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    });
+    await conversation.handle(text(number, 'Bonjour'));
+    expect(sent.find((s) => s.text?.startsWith('Bienvenue'))?.text).toContain(
+      'Devis pour M. Kodjo',
+    );
+    sent.length = 0;
+    await conversation.handle(text(number, sale));
+    expect(sent.some((s) => s.actions)).toBe(false);
+  });
+
+  it('from buttons: the final document, its issuance, then the invoice — without the model', async () => {
+    const number = phone(22);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const { model, read } = scriptedModel([
+      { draft: saleDraft, issuer_name: 'Atelier Koffi', reply: 'C’est noté.' },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    });
+    await conversation.handle(text(number, `${sale}. Atelier Koffi`));
+    expect(sent.find((s) => s.actions)?.actions).toEqual([
+      'draft:preview',
+      FINAL_DOCUMENT,
+      'draft:edit',
+    ]);
+
+    sent.length = 0;
+    await conversation.handle(pressed(number, FINAL_DOCUMENT));
+    expect(sent.find((s) => s.document)?.document).toContain('apercu.pdf');
+    expect(sent.find((s) => s.actions)?.actions).toEqual([ISSUE_CONFIRM, 'issue:cancel']);
+
+    sent.length = 0;
+    await conversation.handle(pressed(number, ISSUE_CONFIRM));
+    expect(sent.find((s) => s.document)?.document).toMatch(/DEV-\d{4}-001\.pdf/);
+    const next = sent.find((s) => s.actions);
+    expect(next?.text).toContain('Transfère ce PDF à M. Kodjo');
+    expect(next?.actions).toEqual([TO_INVOICE, 'doc:new']);
+
+    sent.length = 0;
+    await conversation.handle(pressed(number, TO_INVOICE));
+    expect(sent.find((s) => s.document)?.document).toContain('apercu.pdf');
+    expect(sent.find((s) => s.actions)?.actions).toEqual([ISSUE_CONFIRM, 'issue:cancel']);
+    // Four steps, one model call: the buttons never waited for it.
+    expect(read).toHaveLength(1);
+  });
+
+  it('« annule » brings back the version before the last change', async () => {
+    const number = phone(23);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const fifteen = structuredClone(saleDraft);
+    const tube = fifteen.sections[0]?.lines[0];
+    if (tube) tube.quantity = 15;
+    const { model } = scriptedModel([
+      { draft: saleDraft, reply: 'Noté.' },
+      { draft: fifteen, reply: 'Noté.' },
+      { action: 'undo_last_change', reply: 'C’est annulé.' },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    });
+    await conversation.handle(text(number, sale));
+    await conversation.handle(text(number, 'mets les tubes à 15'));
+    sent.length = 0;
+    await conversation.handle(text(number, "non annule, c'était bien 12"));
+    const texts = sent.map((s) => s.text ?? '');
+    expect(texts[0]).toBe("J'ai remis la version précédente.");
+    expect(texts[1]).toContain('Tube 80x40 (barre) : 12 × 18 000 F CFA');
   });
 });
 
