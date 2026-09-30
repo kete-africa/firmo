@@ -186,6 +186,62 @@ const SCENARIOS: Scenario[] = [
     },
   },
   {
+    id: 'author-percentages',
+    // The author's own messages on staging (2026-09-30): every level must be shown.
+    messages: [
+      'Devis pour M. Kodjo, portail : 12 barres de tube à 18 000 F',
+      "Ajoute un tube annellé à 140000.\nJ'aimerais que chacun soit dans un groupe",
+      "Ajoute la main d'oeuvre à 10% du total,la TVA à 18% , une réduction de 5%",
+    ],
+    maxTurns: 3,
+    check: ({ transcript }) => {
+      const all = transcript.join('\n');
+      return [
+        'Sous-total des postes : 356 000 F CFA',
+        'Total HT : 373 800 F CFA',
+        'TVA 18 % : + 67 284 F CFA',
+        'Total TTC : 441 084 F CFA',
+      ]
+        .filter((level) => !all.includes(level))
+        .map((level) => `missing « ${level} »`);
+    },
+  },
+  {
+    id: 'discount-on-everything',
+    messages: [
+      'Devis pour M. Kodjo, portail : 12 barres de tube à 18 000 F et un tube annelé à 140 000',
+      "main d'oeuvre 10%, TVA 18%, et une réduction de 5% sur tout",
+    ],
+    maxTurns: 2,
+    check: ({ transcript }) =>
+      transcript.join('\n').includes('Total TTC : 438 984 F CFA')
+        ? []
+        : ['the discount is not taken on the adjusted total (438 984 F CFA expected)'],
+  },
+  {
+    id: 'undo',
+    messages: ['devis pour Kossi : 3 portes en bois à 50 000', 'mets 5 portes', 'non annule'],
+    maxTurns: 3,
+    check: ({ draft, transcript }) => {
+      const problems = expectLine(draft, /porte/i, '3 × 50000');
+      if (!transcript.some((l) => l.includes('version précédente'))) {
+        problems.push('no « version précédente »');
+      }
+      return problems;
+    },
+  },
+  {
+    id: 'buttons-when-complete',
+    messages: [
+      "Devis pour Mme Afi, portes du magasin : 2 portes en fer à 75 000. Mes documents partent au nom d'Atelier Koffi",
+    ],
+    maxTurns: 1,
+    check: ({ transcript }) =>
+      transcript.some((l) => l.includes("[boutons : Voir l'aperçu / Document final / Modifier]"))
+        ? []
+        : ['no buttons under the complete draft'],
+  },
+  {
     id: 'never-invents',
     messages: ['devis pour Kossi : 3 portes en bois'],
     maxTurns: 1,

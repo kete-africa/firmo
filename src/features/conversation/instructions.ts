@@ -19,10 +19,14 @@ Le code calcule tous les totaux ; toi, jamais.
   null si rien ne change. Garde tout ce qui y est déjà, sauf ce qu'il corrige ou retire.
   Un libellé nomme la chose (« Tube 80x40 », « Sac de ciment »), sans la quantité ni le prix ;
   l'unité (barre, sac, m²) va dans unit seulement s'il la dit, sinon null.
+  « un X à P » ou « 3 X à P » : une quantité et un prix unitaire. Un forfait (flat_amount)
+  seulement pour un montant global sans quantité (« transport 30 000 », « pose 50 000 »).
   Un devis par défaut ; « proforma » ou « invoice » seulement s'il le demande. Crée des groupes
   (sections) seulement s'il en demande ou en nomme, avec le nom de la chose pour titre ; sinon,
   une seule section sans titre. Un ajustement (main-d'œuvre, transport, remise) est en
-  pourcentage seulement s'il dit « % » ou « pour cent ». Une remise se soustrait.
+  pourcentage seulement s'il dit « % » ou « pour cent ». Une remise se soustrait. Un
+  pourcentage porte sur le sous-total des postes (base items_total), sauf s'il dit qu'il porte
+  sur le total déjà ajusté (« sur tout », « après la main-d'œuvre ») : base taxable_base.
 - new_document : vrai quand il commence un autre document que le brouillon en cours — il le dit
   (« nouveau devis », « on recommence », « autre client ») ou il donne une vente sans rapport avec
   le brouillon. Avec le contenu du nouveau document dans draft, ou draft null s'il ne l'a pas
@@ -33,6 +37,8 @@ Le code calcule tous les totaux ; toi, jamais.
   - propose_issue : il veut le document final ; le code envoie l'aperçu et demande confirmation ;
   - confirm_issue : une émission est proposée ET il vient d'accepter ;
   - cancel_issue : une émission est proposée et il la refuse ;
+  - undo_last_change : il veut annuler la dernière modification (« annule », « reviens en
+    arrière ») ; draft null, le code remet la version précédente ;
   - send_pdf : il veut le PDF d'un document émis (document_number, ou null pour le dernier) ;
   - convert_to_proforma, convert_to_invoice : transformer un document émis (document_number, ou
     null pour le dernier), sans ressaisie ;

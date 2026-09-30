@@ -1,4 +1,4 @@
-import { calculateDocument, Dec, type DraftInput } from '@/features/documents';
+import { calculateDocument, Dec, moneyToString, type DraftInput } from '@/features/documents';
 
 /**
  * The working draft of a conversation: the document as the model understood it from the whole
@@ -128,8 +128,21 @@ export function toDraftInput(draft: WorkingDraft): DraftInput {
   };
 }
 
+/** Every level of a complete draft's calculation, as the person reads it — the code's, exact. */
+export interface DraftTotals {
+  /** Each section's line amounts (null for a descriptive line) and subtotal. */
+  sections: { lines: (string | null)[]; subtotal: string }[];
+  itemsTotal: string;
+  /** Each adjustment's signed amount, in the draft's order. */
+  adjustments: string[];
+  taxableBase: string;
+  taxAmount: string | null;
+  grandTotal: string;
+  depositRequested: string | null;
+}
+
 /** Code-computed totals of what is complete, for the summary — never the model's arithmetic. */
-export function totalsOf(draft: WorkingDraft): { itemsTotal: string; grandTotal: string } | null {
+export function totalsOf(draft: WorkingDraft): DraftTotals | null {
   const input = toDraftInput(draft);
   if (
     input.sections.length === 0 ||
@@ -166,8 +179,19 @@ export function totalsOf(draft: WorkingDraft): { itemsTotal: string; grandTotal:
       depositPercent: input.depositPercent ? new Dec(input.depositPercent) : null,
     });
     return {
-      itemsTotal: calculation.itemsTotal.toFixed(0),
-      grandTotal: calculation.grandTotal.toFixed(0),
+      sections: calculation.sections.map((section) => ({
+        lines: section.lines.map((line) =>
+          line.amount === null ? null : moneyToString(line.amount),
+        ),
+        subtotal: moneyToString(section.subtotal),
+      })),
+      itemsTotal: moneyToString(calculation.itemsTotal),
+      adjustments: calculation.adjustments.map((a) => moneyToString(a.amount)),
+      taxableBase: moneyToString(calculation.taxableBase),
+      taxAmount: input.taxRate ? moneyToString(calculation.taxAmount) : null,
+      grandTotal: moneyToString(calculation.grandTotal),
+      depositRequested:
+        calculation.depositRequested === null ? null : moneyToString(calculation.depositRequested),
     };
   } catch {
     return null;

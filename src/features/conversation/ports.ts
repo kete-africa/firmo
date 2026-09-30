@@ -40,6 +40,11 @@ export interface MessagingChannel {
   ): Promise<{ bytes: Uint8Array; mediaType: string }>;
   /** Acknowledges a pressed button, where the channel expects it. */
   acknowledgeAction?(message: InboundMessage): Promise<void>;
+  /**
+   * Shows « en train d'écrire » while Firmo works on her message; returns the way to stop it.
+   * Never fails the turn: a channel that cannot show it just does nothing.
+   */
+  typing?(message: InboundMessage): () => void;
 }
 
 // --- Model -------------------------------------------------------------------------------------

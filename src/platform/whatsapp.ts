@@ -135,12 +135,18 @@ export function whatsappChannel(options: WhatsAppOptions): MessagingChannel {
         await send({ to, type: 'text', text: { body: text, preview_url: true } });
         return;
       }
+      // An interactive message's text is 1 024 characters at most: a longer one goes first.
+      let body = text;
+      if (text.length > 1024) {
+        await send({ to, type: 'text', text: { body: text, preview_url: true } });
+        body = '…';
+      }
       await send({
         to,
         type: 'interactive',
         interactive: {
           type: 'button',
-          body: { text },
+          body: { text: body },
           action: {
             // WhatsApp: three buttons at most, titles of twenty characters at most.
             buttons: actions
@@ -163,6 +169,24 @@ export function whatsappChannel(options: WhatsAppOptions): MessagingChannel {
       if (!uploaded.ok) throw new Error(`whatsapp upload failed: ${uploaded.status}`);
       const { id } = (await uploaded.json()) as { id: string };
       await send({ to, type: 'document', document: { id, filename, caption } });
+    },
+    typing(message) {
+      // Marks her message read and shows « en train d'écrire » until Firmo answers (25 s at
+      // most, so it is renewed).
+      const show = () =>
+        void http(`${graph}/${options.phoneNumberId}/messages`, {
+          method: 'POST',
+          headers: { ...auth, 'content-type': 'application/json' },
+          body: JSON.stringify({
+            messaging_product: 'whatsapp',
+            status: 'read',
+            message_id: message.providerMessageId,
+            typing_indicator: { type: 'text' },
+          }),
+        }).catch(() => undefined);
+      show();
+      const timer = setInterval(show, 20_000);
+      return () => clearInterval(timer);
     },
     async askForContact(to, text) {
       // WhatsApp's sender is already the number: nothing to ask.
