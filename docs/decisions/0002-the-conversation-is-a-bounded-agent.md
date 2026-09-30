@@ -1,6 +1,6 @@
 # 0002 — The conversation is a bounded agent with guarded tools
 
-- **Status**: accepted (by the author, 2026-09-29: « oui … l'idée de la refonte est aussi de faire
+- **Status**: superseded by 0003 (2026-09-30); accepted before (by the author, 2026-09-29: « oui … l'idée de la refonte est aussi de faire
   mieux partout »)
 - **Date**: 2026-09-29
 - **Applies to**: `src/features/conversation`

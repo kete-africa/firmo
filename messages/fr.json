@@ -237,5 +237,12 @@
   "ops_reason": "Motif",
   "ops_read": "Lire le document",
   "ops_journal": "Journal des lectures",
-  "ops_journal_empty": "Aucune lecture pour l’instant."
+  "ops_journal_empty": "Aucune lecture pour l’instant.",
+  "chat_need_items": "Dis-moi d'abord ce qu'il faut chiffrer.",
+  "chat_need": "Il me manque : {what}.",
+  "chat_issue_changed": "Le brouillon a changé depuis l'aperçu : redemande-moi le document final pour que je te montre le nouvel aperçu.",
+  "chat_document_not_found": "Je ne trouve pas ce document émis. Donne-moi son numéro tel qu'il est écrit sur le PDF.",
+  "chat_convert_refused": "Ce document ne peut pas être transformé : seul un devis ou une proforma émis, accepté ou en attente, peut l'être.",
+  "chat_line_price_missing": "• {label} : {quantity} × prix à préciser",
+  "chat_line_quantity_missing": "• {label} : quantité à préciser × {price}"
 }

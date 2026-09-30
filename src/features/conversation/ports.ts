@@ -44,16 +44,10 @@ export interface MessagingChannel {
 
 // --- Model -------------------------------------------------------------------------------------
 
-export interface ModelTool {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-}
-
-export interface ToolCall {
-  name: string;
-  /** The model's arguments, as JSON text. */
-  arguments: string;
+/** One message of the conversation, as the model reads it. */
+export interface ConversationMessage {
+  role: 'person' | 'firmo';
+  text: string;
 }
 
 export interface TurnUsage {
@@ -74,13 +68,16 @@ export interface ConversationModel {
     mediaType: string;
   }): Promise<{ text: string; usage: TurnUsage }>;
   /**
-   * One turn: the model may call tools — each executed by `execute`, whose answer it reads —
-   * then writes its reply to the person.
+   * One turn (spec 010): the model reads the conversation and answers with one output that
+   * follows `schema` exactly — enforced by the model's API, parsed JSON returned.
    */
-  runTurn(
-    request: { instructions: string; input: string; tools: ModelTool[]; safetyId: string },
-    execute: (call: ToolCall) => Promise<string>,
-  ): Promise<{ reply: string; usage: TurnUsage }>;
+  decide(request: {
+    instructions: string;
+    messages: ConversationMessage[];
+    schema: Record<string, unknown>;
+    schemaName: string;
+    safetyId: string;
+  }): Promise<{ output: unknown; usage: TurnUsage }>;
 }
 
 /** What a conversation announces to Kete Cockpit (spec 008): the model's cost — counters only. */

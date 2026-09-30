@@ -145,64 +145,47 @@ describe('Telegram', () => {
 });
 
 describe('the model adapter', () => {
-  it('runs the tool loop: calls, executes, feeds the results back, then replies', async () => {
+  it('asks one structured output of the conversation, and stores nothing at the provider', async () => {
     const requests: Record<string, unknown>[] = [];
-    const responses = [
-      {
-        output: [{ type: 'function_call', name: 'show_preview', arguments: '{}', call_id: 'c1' }],
-        output_text: '',
-        usage: { input_tokens: 10, output_tokens: 2 },
-      },
-      {
-        output: [],
-        output_text: 'Voici ton aperçu.',
-        usage: { input_tokens: 12, output_tokens: 4 },
-      },
-    ];
     const client = {
       responses: {
         create: async (request: Record<string, unknown>) => {
           requests.push(structuredClone(request));
-          return responses.shift();
+          return {
+            output: [],
+            output_text: '{"reply":"Voici.","action":"none"}',
+            usage: { input_tokens: 30, output_tokens: 5 },
+          };
         },
       },
       audio: {},
     } as never;
-    const executed: string[] = [];
-    const result = await openaiModel({ client, model: 'test-model' }).runTurn(
-      {
-        instructions: 'i',
-        input: 'montre',
-        tools: [
-          {
-            name: 'show_preview',
-            description: 'd',
-            parameters: {
-              type: 'object',
-              properties: {},
-              required: [],
-              additionalProperties: false,
-            },
-          },
-        ],
-        safetyId: 'org',
-      },
-      async (call) => {
-        executed.push(call.name);
-        return '{"ok":true}';
-      },
-    );
-    expect(executed).toEqual(['show_preview']);
+    const schema = { type: 'object', properties: {}, required: [], additionalProperties: false };
+    const result = await openaiModel({ client, model: 'test-model' }).decide({
+      instructions: 'i',
+      messages: [
+        { role: 'person', text: 'bonjour' },
+        { role: 'firmo', text: 'Bienvenue.' },
+        { role: 'person', text: 'montre' },
+      ],
+      schema,
+      schemaName: 'firmo_turn',
+      safetyId: 'org',
+    });
     expect(result).toEqual({
-      reply: 'Voici ton aperçu.',
-      usage: { inputTokens: 22, outputTokens: 6, modelCalls: 2 },
+      output: { reply: 'Voici.', action: 'none' },
+      usage: { inputTokens: 30, outputTokens: 5, modelCalls: 1 },
     });
-    const second = requests[1]?.input as { type?: string; call_id?: string; output?: string }[];
-    expect(second.at(-1)).toEqual({
-      type: 'function_call_output',
-      call_id: 'c1',
-      output: '{"ok":true}',
+    expect(requests).toHaveLength(1);
+    expect(requests[0]).toMatchObject({
+      store: false,
+      safety_identifier: 'org',
+      input: [
+        { role: 'user', content: 'bonjour' },
+        { role: 'assistant', content: 'Bienvenue.' },
+        { role: 'user', content: 'montre' },
+      ],
+      text: { format: { type: 'json_schema', name: 'firmo_turn', schema, strict: true } },
     });
-    expect(requests[0]).toMatchObject({ store: false, safety_identifier: 'org' });
   });
 });
