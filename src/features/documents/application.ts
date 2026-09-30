@@ -224,6 +224,12 @@ export function createDocuments(deps: DocumentsDeps) {
       if (!saved) throw new DocumentError('profile_required', 409);
     },
 
+    /** A client he already wrote a document for: its latest phone and address (spec 011). */
+    async knownClient(actor: Actor, name: string) {
+      if (!name.trim()) return null;
+      return inOrganization(actor.organizationId, (tx) => repo.knownClient(tx, name));
+    },
+
     /** The last issued document, or null. */
     async latestIssued(actor: Actor) {
       return inOrganization(actor.organizationId, async (tx) => {

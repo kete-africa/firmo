@@ -7,6 +7,7 @@ import {
   ISSUE_CONFIRM,
   type ConversationMessage,
   type ConversationModel,
+  DOCUMENT_PDF,
   FINAL_DOCUMENT,
   TO_INVOICE,
   type DraftOutput,
@@ -51,6 +52,7 @@ function recordingChannel(channel: 'whatsapp' | 'telegram') {
     actions?: string[];
     document?: string;
     contactAsked?: boolean;
+    list?: string[];
   }[] = [];
   const typing: string[] = [];
   const adapter: MessagingChannel = {
@@ -64,6 +66,9 @@ function recordingChannel(channel: 'whatsapp' | 'telegram') {
     },
     async askForContact(to, text) {
       sent.push({ to, text, contactAsked: true });
+    },
+    async sendList(to, text, _label, rows) {
+      sent.push({ to, text, list: rows.map((row) => `${row.id}|${row.title}|${row.description}`) });
     },
     async download() {
       return { bytes: new Uint8Array([1]), mediaType: 'audio/ogg' };
@@ -497,7 +502,7 @@ describe('a guided conversation (spec 011)', () => {
     expect(sent.find((s) => s.document)?.document).toMatch(/DEV-\d{4}-001\.pdf/);
     const next = sent.find((s) => s.actions);
     expect(next?.text).toContain('Transfère ce PDF à M. Kodjo');
-    expect(next?.actions).toEqual([TO_INVOICE, 'doc:new']);
+    expect(next?.actions).toEqual([TO_INVOICE, 'doc:new', 'doc:list']);
 
     sent.length = 0;
     await conversation.handle(pressed(number, TO_INVOICE));
@@ -545,6 +550,80 @@ describe('a guided conversation (spec 011)', () => {
     expect(texts[0]).toBe("J'ai remis la version précédente.");
     expect(texts[1]).toContain('Tube 80x40 (barre) : 12 × 18 000 F CFA');
   });
+});
+
+describe('Firmo remembers for him (spec 011, lot 3)', () => {
+  it("a known client's phone and address come back from his own documents", async () => {
+    const number = phone(30);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const withContact: DraftOutput = {
+      ...saleDraft,
+      client_phone: '90 00 00 00',
+      client_address: 'Agoè',
+    };
+    const { model } = scriptedModel([
+      { draft: withContact, issuer_name: 'Atelier Koffi', action: 'show_preview', reply: '' },
+      {
+        new_document: true,
+        draft: { ...saleDraft, client_name: 'm. kodjo', subject: 'Portes du magasin' },
+        reply: 'Noté.',
+      },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    });
+    await conversation.handle(text(number, sale));
+    sent.length = 0;
+    await conversation.handle(text(number, 'Nouveau devis pour M. Kodjo : portes du magasin'));
+    expect(sent[0]?.text).toContain(
+      'Client : m. kodjo · 90 00 00 00 · Agoè (repris de ton carnet)',
+    );
+  });
+
+  it('his latest documents as a list; a chosen one comes back as its PDF', async () => {
+    const number = phone(31);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const { model } = scriptedModel([
+      { reply: 'Bonjour !' },
+      { action: 'list_documents', reply: '' },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    });
+    await conversation.handle(text(number, 'Bonjour'));
+    const actor = { organizationId: organizations.at(-1) ?? '' };
+    await documents.setIssuerName(actor, 'Atelier Koffi');
+    const id = await documents.createDraft(actor, {
+      type: 'quote',
+      subject: 'Portail',
+      client: { name: 'M. Kodjo' },
+      sections: [{ lines: [{ label: 'Portail', quantity: '1', unitPrice: '250000' }] }],
+    });
+    const { number: issuedNumber } = await documents.issue(actor, id, {
+      sha256: await documents.previewHash(actor, id),
+    });
+    sent.length = 0;
+    await conversation.handle(text(number, 'mes derniers documents'));
+    const list = sent.find((s) => s.list);
+    expect(list?.list).toEqual([`${DOCUMENT_PDF}${id}|${issuedNumber}|M. Kodjo · Portail · émis`]);
+    sent.length = 0;
+    await conversation.handle({
+      ...text(number, ''),
+      kind: 'action',
+      action: `${DOCUMENT_PDF}${id}`,
+    });
+    expect(sent.find((s) => s.document)?.document).toContain(`${issuedNumber}.pdf`);
+    // Another organization's document is not found, never sent.
+    sent.length = 0;
+    await conversation.handle({ ...text(number, ''), kind: 'action', action: `${DOCUMENT_PDF}1` });
+    expect(sent.some((s) => s.document)).toBe(false);
+  }, 60_000);
 });
 
 describe('the plans (spec 007)', () => {

@@ -93,7 +93,9 @@ export function parseNotification(body: unknown): InboundMessage[] {
             },
           });
         } else if (type === 'interactive') {
-          const reply = record(record(message.interactive).button_reply);
+          const interactive = record(message.interactive);
+          // A reply button, or a row chosen in a list.
+          const reply = record(interactive.button_reply ?? interactive.list_reply);
           messages.push({ ...base, kind: 'action', action: String(reply.id ?? '') });
         } else if (type === 'button') {
           messages.push({
@@ -187,6 +189,30 @@ export function whatsappChannel(options: WhatsAppOptions): MessagingChannel {
       show();
       const timer = setInterval(show, 20_000);
       return () => clearInterval(timer);
+    },
+    async sendList(to, text, buttonLabel, rows) {
+      // WhatsApp: ten rows at most; a title of 24 characters, a description of 72.
+      await send({
+        to,
+        type: 'interactive',
+        interactive: {
+          type: 'list',
+          body: { text: text.slice(0, 1024) },
+          action: {
+            button: buttonLabel.slice(0, 20),
+            sections: [
+              {
+                title: buttonLabel.slice(0, 24),
+                rows: rows.slice(0, 10).map((row) => ({
+                  id: row.id,
+                  title: row.title.slice(0, 24),
+                  description: row.description.slice(0, 72),
+                })),
+              },
+            ],
+          },
+        },
+      });
     },
     async askForContact(to, text) {
       // WhatsApp's sender is already the number: nothing to ask.

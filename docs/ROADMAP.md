@@ -205,6 +205,31 @@ Firmo understands the first time, answers fast, and keeps each person's conversa
 
 ---
 
+## Phase 4.3 — A guided conversation · `specs/011-guided-chat` · _delivered_
+
+### Objective
+
+He checks at a glance, taps instead of typing, and Firmo remembers for him.
+
+### Scope
+
+- Every level of the total in the conversation and on the PDF (template v5); what each
+  percentage is taken on.
+- Buttons at the three moments (a complete draft, the preview, an issued document), run without
+  the model; « annule »; « en train d'écrire »; a first example.
+- He forwards the PDF to his client himself; Firmo never writes to his client.
+- How his clients pay him, asked once, printed on his invoices; his client book from his own
+  documents; his latest documents as a list.
+- Waiting for the author's ok: reusing his past prices, automatic reminders.
+
+### Proof
+
+- `[agent]` `tests/conversation.test.ts`, `tests/channels.test.ts`, `tests/presentation.test.ts`.
+- `[agent]` The validated simulation, with the real model: `author-percentages`,
+  `invoice-asks-payment`, `remembers`, `undo`, `buttons-when-complete`.
+
+---
+
 ## Phase 5 — Plans and quota · `specs/007-plans` · _delivered_
 
 ### Objective

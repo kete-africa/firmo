@@ -260,6 +260,27 @@ const SCENARIOS: Scenario[] = [
     },
   },
   {
+    id: 'remembers',
+    messages: [
+      "Devis pour M. Kodjo (tél 90 00 00 00, Agoè), portail : 12 barres de tube à 18 000 F. Au nom d'Atelier Koffi",
+      'fais le document final',
+      'oui émets',
+      'mes derniers documents',
+      'Nouveau devis pour M. Kodjo, portes du magasin : 2 portes en fer à 95 000',
+    ],
+    maxTurns: 5,
+    check: ({ transcript }) => {
+      const problems: string[] = [];
+      if (!transcript.some((l) => /• DEV-\d{4}-001 — M\. Kodjo/.test(l))) {
+        problems.push('no list of his documents');
+      }
+      if (!transcript.some((l) => l.includes('90 00 00 00 · Agoè (repris de ton carnet)'))) {
+        problems.push('the client book did not fill the new quote');
+      }
+      return problems;
+    },
+  },
+  {
     id: 'never-invents',
     messages: ['devis pour Kossi : 3 portes en bois'],
     maxTurns: 1,

@@ -144,6 +144,20 @@ export function telegramChannel(options: TelegramOptions): MessagingChannel {
       );
       await call('sendDocument', form);
     },
+    async sendList(to, text, _buttonLabel, rows) {
+      // Telegram: one button per row, under the message.
+      await call('sendMessage', {
+        chat_id: to,
+        text,
+        reply_markup: {
+          inline_keyboard: rows
+            .slice(0, 10)
+            .map((row) => [
+              { text: `${row.title} — ${row.description}`.slice(0, 64), callback_data: row.id },
+            ]),
+        },
+      });
+    },
     async askForContact(to, text, buttonLabel) {
       await call('sendMessage', {
         chat_id: to,

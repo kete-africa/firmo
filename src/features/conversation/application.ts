@@ -52,7 +52,13 @@ export interface ConversationDeps {
 
 type Outgoing =
   | { kind: 'text'; text: string; actions?: OutboundAction[] }
-  | { kind: 'document'; pdf: Uint8Array; filename: string; caption: string };
+  | { kind: 'document'; pdf: Uint8Array; filename: string; caption: string }
+  | {
+      kind: 'list';
+      text: string;
+      buttonLabel: string;
+      rows: { id: string; title: string; description: string }[];
+    };
 
 export const ISSUE_CONFIRM = 'issue:confirm';
 export const ISSUE_CANCEL = 'issue:cancel';
@@ -62,6 +68,9 @@ export const FINAL_DOCUMENT = 'draft:final';
 export const EDIT_DRAFT = 'draft:edit';
 export const TO_INVOICE = 'doc:invoice';
 export const NEW_DOCUMENT = 'doc:new';
+export const MY_DOCUMENTS = 'doc:list';
+/** A document chosen in his list: `doc:pdf:<id>`. */
+export const DOCUMENT_PDF = 'doc:pdf:';
 /** Refusals of the plans (spec 007): the code answers them, with the way to subscribe. */
 const PLAN_REFUSALS = new Set(['plan_required', 'quota_reached', 'plans_unavailable']);
 /** The exchanges the model reads: enough for a document, never a past document's prices. */
@@ -81,7 +90,15 @@ export function createConversation(deps: ConversationDeps) {
   async function deliver(channel: MessagingChannel, to: string, outbox: Outgoing[]) {
     for (const item of outbox) {
       if (item.kind === 'text') await channel.sendText(to, item.text, item.actions);
-      else await channel.sendDocument(to, item.pdf, item.filename, item.caption);
+      else if (item.kind === 'document') {
+        await channel.sendDocument(to, item.pdf, item.filename, item.caption);
+      } else if (channel.sendList) {
+        await channel.sendList(to, item.text, item.buttonLabel, item.rows);
+      } else {
+        // A channel without lists: the same choices, written out.
+        const lines = item.rows.map((row) => `• ${row.title} — ${row.description}`);
+        await channel.sendText(to, [item.text, ...lines].join('\n'));
+      }
     }
   }
 
@@ -350,6 +367,11 @@ function createTurn(input: {
   /** The document issued this turn: what the next buttons offer. */
   let justIssued: { type: 'quote' | 'proforma' | 'invoice'; client: string } | null = null;
   let previewSent = false;
+  /** The client's phone and address came from his client book this turn. */
+  let fromBook = false;
+  /** The code sent the list itself: the model's reply would come after it. */
+  let listSent = false;
+  let listed: { id: string; title: string; description: string }[] = [];
   let undone = false;
 
   const typeLabel = (type: 'quote' | 'proforma' | 'invoice') =>
@@ -504,6 +526,57 @@ function createTurn(input: {
     return true;
   }
 
+  /** His last issued documents, to choose one: its PDF comes back (spec 011, lot 3). */
+  async function listDocuments() {
+    const issued = (await deps.documents.list(actor, 30))
+      .filter((d) => d.state !== 'draft' && d.number)
+      .slice(0, 10);
+    if (issued.length === 0) {
+      ask(m.chat_no_documents({}, { locale }));
+      return;
+    }
+    const rows = issued.map((d) => ({
+      id: `${DOCUMENT_PDF}${d.id}`,
+      title: d.number ?? '',
+      description: [d.clientName, d.subject, stateLabel(d.state)].join(' · '),
+    }));
+    listed = rows;
+    listSent = true;
+    codeAnswered = true;
+    outbox.push({
+      kind: 'list',
+      text: m.chat_documents_list({}, { locale }),
+      buttonLabel: m.chat_documents_button({}, { locale }),
+      rows: listed,
+    });
+  }
+
+  /** The PDF of one of his issued documents, chosen in his list. */
+  async function sendPdfOf(id: number) {
+    try {
+      const { number, pdf } = await deps.documents.pdf(actor, id);
+      const document = await deps.documents.get(actor, id);
+      outbox.push({
+        kind: 'document',
+        pdf,
+        filename: `${number.replace(/[/\\]/g, '-')}.pdf`,
+        caption: m.chat_issued_caption({ type: typeLabel(document.type), number }, { locale }),
+      });
+    } catch (error) {
+      if (!(error instanceof DocumentError)) throw error;
+      ask(m.chat_document_not_found({}, { locale }));
+    }
+  }
+
+  const stateLabel = (value: string) =>
+    ({
+      issued: m.chat_state_issued({}, { locale }),
+      accepted: m.chat_state_accepted({}, { locale }),
+      refused: m.chat_state_refused({}, { locale }),
+      unanswered: m.chat_state_unanswered({}, { locale }),
+      cancelled: m.chat_state_cancelled({}, { locale }),
+    })[value] ?? value;
+
   async function sendLink(path: string) {
     const link = await deps.identity.spaceLink(personId, path);
     say(m.chat_space_link({ url: link.url }, { locale }));
@@ -560,6 +633,8 @@ function createTurn(input: {
         });
         return;
       }
+      case 'list_documents':
+        return listDocuments();
       case 'convert_to_proforma':
       case 'convert_to_invoice': {
         const document = await issuedDocument(output.document_number);
@@ -592,10 +667,19 @@ function createTurn(input: {
     }
   }
 
+  /** A client he already wrote for: its phone and address, from his own documents. */
+  async function withKnownClient(draft: WorkingDraft): Promise<WorkingDraft> {
+    if (!draft.client_name || draft.client_phone || draft.client_address) return draft;
+    const known = await deps.documents.knownClient(actor, draft.client_name);
+    if (!known) return draft;
+    fromBook = true;
+    return { ...draft, client_phone: known.phone, client_address: known.address };
+  }
+
   /** The summary of a changed draft, first — after « c'est annulé » when it was an undo. */
   function showSummary() {
     if (!draftChanged || !state.draft) return;
-    outbox.unshift({ kind: 'text', text: summaryForPerson(state.draft, locale) });
+    outbox.unshift({ kind: 'text', text: summaryForPerson(state.draft, locale, { fromBook }) });
     if (undone) outbox.unshift({ kind: 'text', text: m.chat_undone({}, { locale }) });
     draftChanged = false;
   }
@@ -606,13 +690,14 @@ function createTurn(input: {
    * code already asked its own question.
    */
   async function offerNext() {
-    if (outbox.some((item) => item.kind === 'text' && item.actions?.length)) return;
+    if (listSent || outbox.some((item) => item.kind === 'text' && item.actions?.length)) return;
     let actions: OutboundAction[] = [];
     if (justIssued) {
       if (canConvert(justIssued.type, 'issued', 'invoice')) {
         actions.push({ id: TO_INVOICE, label: m.chat_button_invoice({}, { locale }) });
       }
       actions.push({ id: NEW_DOCUMENT, label: m.chat_button_new({}, { locale }) });
+      actions.push({ id: MY_DOCUMENTS, label: m.chat_button_documents({}, { locale }) });
       outbox.push({
         kind: 'text',
         text: {
@@ -658,7 +743,7 @@ function createTurn(input: {
       if (draft && !sameDraft(draft, state.draft)) {
         // The version before this change is what « annule » brings back.
         state.previousDraft = state.draft;
-        state.draft = draft;
+        state.draft = await withKnownClient(draft);
         // A changed draft is not the one previewed: its proposal is void.
         state.pendingIssue = null;
         draftChanged = true;
@@ -688,6 +773,13 @@ function createTurn(input: {
         resetDocument();
         ask(m.chat_new_document({}, { locale }));
         return;
+      } else if (id === MY_DOCUMENTS) {
+        await listDocuments();
+        return;
+      } else if (id.startsWith(DOCUMENT_PDF)) {
+        const documentId = Number(id.slice(DOCUMENT_PDF.length));
+        if (Number.isSafeInteger(documentId) && documentId > 0) await sendPdfOf(documentId);
+        return;
       } else return;
       showSummary();
       await offerNext();
@@ -704,7 +796,8 @@ function createTurn(input: {
           [EDIT_DRAFT]: m.chat_button_edit({}, { locale }),
           [TO_INVOICE]: m.chat_button_invoice({}, { locale }),
           [NEW_DOCUMENT]: m.chat_button_new({}, { locale }),
-        }[id] ?? id
+          [MY_DOCUMENTS]: m.chat_button_documents({}, { locale }),
+        }[id] ?? (id.startsWith(DOCUMENT_PDF) ? m.chat_button_documents({}, { locale }) : id)
       );
     },
 
@@ -714,7 +807,9 @@ function createTurn(input: {
         .map((item) =>
           item.kind === 'text'
             ? item.text.replace(/https?:\/\/\S+/g, '[lien]')
-            : `[PDF : ${item.caption}]`,
+            : item.kind === 'document'
+              ? `[PDF : ${item.caption}]`
+              : `${item.text} ${item.rows.map((row) => row.title).join(', ')}`,
         )
         .join('\n');
       state.history.push({ person: text.slice(0, 1500), firmo: firmo.slice(0, 1500) });
