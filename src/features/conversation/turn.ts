@@ -80,6 +80,12 @@ export const turnOutput = z.object({
   issuer_name: text.describe(
     'Le nom sous lequel ses documents partent, quand il vient de le dire.',
   ),
+  payment_instructions: text.describe(
+    'Comment ses clients le paient (ex. « T-Money 90 12 34 56 »), tel qu’il vient de le dire.',
+  ),
+  payment_declined: z
+    .boolean()
+    .describe('Vrai s’il répond qu’il ne veut pas l’indiquer sur ses factures.'),
   action: z.enum(ACTIONS),
   document_number: text.describe(
     'Pour send_pdf ou une conversion : le numéro du document visé ; null pour le dernier émis.',
@@ -216,9 +222,20 @@ export function toDraftOutput(draft: WorkingDraft): DraftOutput {
   };
 }
 
-/** Two drafts say the same document. */
+/** A value as JSON with its keys sorted: the database does not keep an object's key order. */
+function canonical(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(
+          Object.entries(v as Record<string, unknown>).sort(([x], [y]) => (x < y ? -1 : 1)),
+        )
+      : v,
+  );
+}
+
+/** Two drafts say the same document — whatever the order of their keys. */
 export function sameDraft(a: WorkingDraft | null, b: WorkingDraft | null): boolean {
-  return JSON.stringify(a) === JSON.stringify(b);
+  return canonical(a) === canonical(b);
 }
 
 // --- The schema as the model's API receives it --------------------------------------------------

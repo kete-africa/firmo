@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  sameDraft,
   strictJsonSchema,
   toDraftOutput,
   toWorkingDraft,
@@ -94,9 +95,25 @@ describe('the schema the model receives', () => {
       'draft',
       'new_document',
       'issuer_name',
+      'payment_instructions',
+      'payment_declined',
       'action',
       'document_number',
     ]);
     expect(schema.additionalProperties).toBe(false);
+  });
+});
+
+describe('the same draft', () => {
+  it('whatever the order of its keys, as the database gives it back', () => {
+    const draft = toWorkingDraft(base).draft;
+    const reordered = JSON.parse(
+      JSON.stringify(draft, (_k, v: unknown) =>
+        v && typeof v === 'object' && !Array.isArray(v)
+          ? Object.fromEntries(Object.entries(v as Record<string, unknown>).reverse())
+          : v,
+      ),
+    ) as typeof draft;
+    expect(sameDraft(draft, reordered)).toBe(true);
   });
 });

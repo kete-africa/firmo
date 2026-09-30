@@ -109,6 +109,7 @@ export const profileInput = z.object({
   defaultDelivery: optionalText(300),
   defaultDepositPercent: decimal.nullish(),
   defaultValidityDays: z.number().int().positive().max(3650).nullish(),
+  paymentInstructions: optionalText(300),
 });
 export type ProfileInput = z.input<typeof profileInput>;
 

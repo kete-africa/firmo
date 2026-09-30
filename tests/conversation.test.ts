@@ -82,6 +82,8 @@ const out = (step: Partial<TurnOutput>): TurnOutput => ({
   draft: null,
   new_document: false,
   issuer_name: null,
+  payment_instructions: null,
+  payment_declined: false,
   action: 'none',
   document_number: null,
   ...step,
@@ -466,6 +468,11 @@ describe('a guided conversation (spec 011)', () => {
     const { adapter, sent } = recordingChannel('whatsapp');
     const { model, read } = scriptedModel([
       { draft: saleDraft, issuer_name: 'Atelier Koffi', reply: 'C’est noté.' },
+      {
+        payment_instructions: 'T-Money 90 12 34 56',
+        action: 'convert_to_invoice',
+        reply: 'C’est noté.',
+      },
     ]);
     const conversation = createConversation({
       model,
@@ -494,11 +501,24 @@ describe('a guided conversation (spec 011)', () => {
 
     sent.length = 0;
     await conversation.handle(pressed(number, TO_INVOICE));
-    expect(sent.find((s) => s.document)?.document).toContain('apercu.pdf');
-    expect(sent.find((s) => s.actions)?.actions).toEqual([ISSUE_CONFIRM, 'issue:cancel']);
+    // Before his first invoice: how his clients pay him, asked once.
+    expect(sent.map((s) => s.text)).toEqual([
+      "Sur tes factures, j'indique comment te payer ? Donne par exemple ton numéro T-Money ou Flooz, ou réponds « non ».",
+    ]);
     // Four steps, one model call: the buttons never waited for it.
     expect(read).toHaveLength(1);
-  });
+
+    sent.length = 0;
+    await conversation.handle(text(number, 'T-Money 90 12 34 56'));
+    expect(sent.find((s) => s.document)?.document).toContain('apercu.pdf');
+    expect(sent.find((s) => s.actions)?.actions).toEqual([ISSUE_CONFIRM, 'issue:cancel']);
+    const profile = await documents.profile({ organizationId: organizations.at(-1) ?? '' });
+    expect(profile).toMatchObject({
+      paymentInstructions: 'T-Money 90 12 34 56',
+      paymentAsked: true,
+    });
+    // A whole journey: three real PDF renderings and their storage.
+  }, 90_000);
 
   it('« annule » brings back the version before the last change', async () => {
     const number = phone(23);

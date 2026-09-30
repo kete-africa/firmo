@@ -209,6 +209,21 @@ export function createDocuments(deps: DocumentsDeps) {
       );
     },
 
+    /**
+     * How his clients pay him, printed on his invoices (spec 011) — null when he declines. Needs
+     * his profile: the issuer name is always asked first.
+     */
+    async setPaymentInstructions(actor: Actor, instructions: string | null): Promise<void> {
+      const text = instructions?.trim() || null;
+      if (text !== null && text.length > 300) {
+        throw new DocumentError('invalid_input', 422, 'paymentInstructions');
+      }
+      const saved = await inOrganization(actor.organizationId, (tx) =>
+        repo.setPaymentInstructions(tx, text),
+      );
+      if (!saved) throw new DocumentError('profile_required', 409);
+    },
+
     /** The last issued document, or null. */
     async latestIssued(actor: Actor) {
       return inOrganization(actor.organizationId, async (tx) => {

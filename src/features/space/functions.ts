@@ -372,6 +372,7 @@ export const fetchPresentation = createServerFn({ method: 'GET' }).handler(async
           defaultDelivery: profile.defaultDelivery,
           defaultDepositPercent: profile.defaultDepositPercent?.toFixed() ?? null,
           defaultValidityDays: profile.defaultValidityDays,
+          paymentInstructions: profile.paymentInstructions,
         }
       : null,
     clauses,
@@ -396,6 +397,7 @@ const profileFields = z.object({
   defaultDelivery: z.string().nullable(),
   defaultDepositPercent: z.string().nullable(),
   defaultValidityDays: z.number().int().positive(),
+  paymentInstructions: z.string().nullable(),
 });
 
 export const savePresentation = createServerFn({ method: 'POST' })
@@ -419,6 +421,7 @@ export const savePresentation = createServerFn({ method: 'POST' })
         defaultDelivery: empty(data.defaultDelivery),
         defaultDepositPercent: empty(data.defaultDepositPercent),
         defaultValidityDays: data.defaultValidityDays,
+        paymentInstructions: empty(data.paymentInstructions),
       });
       return { ok: true as const };
     } catch (error) {

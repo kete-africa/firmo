@@ -262,7 +262,11 @@
   "chat_edit_hint": "Dis-moi ce qu'il faut changer : un prix, une quantité, une ligne à ajouter ou à retirer.",
   "chat_new_document": "D'accord, on commence un nouveau document. Envoie-moi ta vente en vocal ou en texte.",
   "chat_next_step": "Et maintenant ?",
-  "chat_issued_forward": "Ton {type} est émis. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer ».",
   "chat_undone": "J'ai remis la version précédente.",
-  "chat_nothing_to_undo": "Il n'y a pas de modification à annuler."
+  "chat_nothing_to_undo": "Il n'y a pas de modification à annuler.",
+  "profile_payment": "Comment te payer (imprimé sur tes factures)",
+  "chat_ask_payment": "Sur tes factures, j'indique comment te payer ? Donne par exemple ton numéro T-Money ou Flooz, ou réponds « non ».",
+  "chat_issued_forward_quote": "Ton devis est émis. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer ».",
+  "chat_issued_forward_proforma": "Ta proforma est émise. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer ».",
+  "chat_issued_forward_invoice": "Ta facture est émise. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer »."
 }

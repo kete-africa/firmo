@@ -53,6 +53,8 @@
 #let money(value, color: muted) = [#format-number(value) #text(size: 7pt, fill: color)[F CFA]]
 #let tax-rate = field(data, "tax_rate")
 #let tax-amount = field(data, "tax_amount")
+#let items-total = field(data, "items_total")
+#let taxable-base = field(data, "taxable_base")
 #let grand-total = field(data, "grand_total")
 #let deposit-percent = field(data, "deposit_percent")
 #let deposit-requested = field(data, "deposit_requested")
@@ -323,10 +325,17 @@
       columns: (1fr, auto),
       row-gutter: 2.2mm,
       align: (left, right),
+      // Every level, as in the conversation: items subtotal, adjustments, total before tax.
+      ..if present(items-total) and (adjustments.len() > 0 or present(tax-amount)) {
+        (text(size: 8pt, weight: 650)[Sous-total], text(font: "JetBrains Mono", size: 7.8pt, weight: 650)[#money(items-total)])
+      } else { () },
       ..adjustments.filter(adjustment => present(field(adjustment, "amount"))).map(adjustment => (
         text(size: 8pt, fill: muted)[#field(adjustment, "label", fallback: "Ajustement")#if field(adjustment, "mode") == "percent" and present(field(adjustment, "value")) [ (#field(adjustment, "value") %)]],
         text(font: "JetBrains Mono", size: 7.8pt)[#money(field(adjustment, "amount"))],
       )).flatten(),
+      ..if present(tax-amount) and present(taxable-base) {
+        (text(size: 8pt, weight: 650)[Total HT], text(font: "JetBrains Mono", size: 7.8pt, weight: 650)[#money(taxable-base)])
+      } else { () },
       ..if present(tax-amount) {
         (
           text(size: 8pt, fill: muted)[TVA#if present(tax-rate) [ (#tax-rate %)]], text(font: "JetBrains Mono", size: 7.8pt)[#money(tax-amount)],
@@ -378,6 +387,10 @@
           (text(size: 7.7pt, weight: 650)[Solde restant], text(font: "JetBrains Mono", size: 7.6pt, weight: 650)[#money(balance-due)])
         } else { () },
       )
+    ]
+    #if present(field(issuer, "payment")) [
+      #v(2.5mm)
+      #text(size: 7.7pt, weight: 650)[Paiement : #field(issuer, "payment")]
     ]
   ],
 )

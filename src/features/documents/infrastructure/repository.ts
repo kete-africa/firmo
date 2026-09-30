@@ -94,6 +94,10 @@ export interface StoredProfile extends Header {
   defaultDelivery: string | null;
   defaultDepositPercent: Dec | null;
   defaultValidityDays: number;
+  /** How his clients pay him, printed on his invoices. */
+  paymentInstructions: string | null;
+  /** Whether the conversation already asked it (once). */
+  paymentAsked: boolean;
 }
 
 // --- Profile -------------------------------------------------------------------------------
@@ -118,6 +122,8 @@ export async function loadProfile(tx: Transaction): Promise<StoredProfile | null
     defaultDelivery: str(row.default_delivery),
     defaultDepositPercent: dec(row.default_deposit_percent),
     defaultValidityDays: Number(row.default_validity_days),
+    paymentInstructions: str(row.payment_instructions),
+    paymentAsked: row.payment_asked === true,
   };
 }
 
@@ -139,17 +145,18 @@ export async function saveProfile(
     defaultDelivery: string | null;
     defaultDepositPercent: string | null;
     defaultValidityDays: number | null;
+    paymentInstructions: string | null;
   },
 ): Promise<void> {
   await tx.execute(sql`
     insert into organization_profiles (
       organization_id, name, legal_name, trade, phone, email, address, legal_mentions, rccm,
       tax_id, brand_color, default_warranty, default_delivery, default_deposit_percent,
-      default_validity_days)
+      default_validity_days, payment_instructions, payment_asked)
     values (${organizationId}, ${p.name}, ${p.legalName}, ${p.trade}, ${p.phone}, ${p.email},
       ${p.address}, ${p.legalMentions}, ${p.rccm}, ${p.taxId}, ${p.brandColor},
       ${p.defaultWarranty}, ${p.defaultDelivery}, ${p.defaultDepositPercent},
-      ${p.defaultValidityDays ?? 30})
+      ${p.defaultValidityDays ?? 30}, ${p.paymentInstructions}, ${p.paymentInstructions !== null})
     on conflict (organization_id) do update set
       name = excluded.name, legal_name = excluded.legal_name, trade = excluded.trade,
       phone = excluded.phone, email = excluded.email, address = excluded.address,
@@ -157,7 +164,10 @@ export async function saveProfile(
       brand_color = excluded.brand_color, default_warranty = excluded.default_warranty,
       default_delivery = excluded.default_delivery,
       default_deposit_percent = excluded.default_deposit_percent,
-      default_validity_days = excluded.default_validity_days, updated_at = now()`);
+      default_validity_days = excluded.default_validity_days,
+      payment_instructions = excluded.payment_instructions,
+      payment_asked = organization_profiles.payment_asked or excluded.payment_asked,
+      updated_at = now()`);
 }
 
 /** The name documents leave under; the rest of the profile is kept as it is. */
@@ -169,6 +179,17 @@ export async function setIssuerName(
   await tx.execute(sql`
     insert into organization_profiles (organization_id, name) values (${organizationId}, ${name})
     on conflict (organization_id) do update set name = excluded.name, updated_at = now()`);
+}
+
+/** How his clients pay him — or null when he said he does not want it printed. Asked once. */
+export async function setPaymentInstructions(
+  tx: Transaction,
+  instructions: string | null,
+): Promise<boolean> {
+  const result = await tx.execute(sql`
+    update organization_profiles
+    set payment_instructions = ${instructions}, payment_asked = true, updated_at = now()`);
+  return (result.rowCount ?? 0) > 0;
 }
 
 /** The last issued document (any state after issuance), or null. */
