@@ -37,6 +37,8 @@ interface Scenario {
   id: string;
   /** Fixed messages, sent as written; otherwise a second model plays `persona`. */
   messages?: string[];
+  /** Before the message at `turn`, her previous message is made `hours` older (a pause). */
+  pauseBefore?: { turn: number; hours: number };
   persona?: string;
   mission?: string;
   maxTurns: number;
@@ -129,6 +131,57 @@ const SCENARIOS: Scenario[] = [
       const problems = lines.some((l) => /filtre/i.test(l)) ? ['the filter is still there'] : [];
       const oil = lines.find((l) => /vidange/i.test(l)) ?? '';
       if (!/: (18000|1 × 18000)$/.test(oil)) problems.push(`${oil || 'no oil change'} ≠ 18000`);
+      return problems;
+    },
+  },
+  {
+    id: 'greeting-resumes',
+    messages: ['devis pour Kossi : 3 portes en bois', 'Cc'],
+    maxTurns: 2,
+    check: ({ draft, transcript }) => {
+      const problems = expectLine(draft, /porte/i, '3 × null');
+      const last = transcript.at(-1) ?? '';
+      if (!/kossi|porte/i.test(last)) problems.push(`no reminder of the document: ${last}`);
+      if (!/prix/i.test(last)) problems.push(`does not ask the price: ${last}`);
+      return problems;
+    },
+  },
+  {
+    id: 'long-pause',
+    messages: ['devis pour Kossi : 3 portes en bois', 'Cc'],
+    pauseBefore: { turn: 1, hours: 50 },
+    maxTurns: 2,
+    check: ({ draft, transcript }) => {
+      const problems = expectLine(draft, /porte/i, '3 × null');
+      const last = transcript.at(-1) ?? '';
+      if (!/continu|nouveau/i.test(last)) problems.push(`does not ask continue or new: ${last}`);
+      return problems;
+    },
+  },
+  {
+    id: 'start-over',
+    messages: [
+      'Devis pour M. Kodjo, portail : 12 barres de tube à 18 000 F',
+      'je veux commencer un nouveau devis',
+      'Devis pour Mme Afi : porte en bois 1 à 150 000',
+    ],
+    maxTurns: 3,
+    check: ({ draft }) => {
+      const problems = expectLine(draft, /porte/i, '1 × 150000');
+      if (linesOf(draft).some((l) => /tube/i.test(l))) problems.push('the previous quote remains');
+      return problems;
+    },
+  },
+  {
+    id: 'start-over-direct',
+    messages: [
+      'Devis pour M. Kodjo, portail : 12 barres de tube à 18 000 F',
+      'Nouveau devis pour Mme Afi : une porte en bois à 150 000 F',
+    ],
+    maxTurns: 2,
+    check: ({ draft }) => {
+      const problems = expectLine(draft, /porte/i, '1 × 150000');
+      if (linesOf(draft).some((l) => /tube/i.test(l))) problems.push('the previous quote remains');
       return problems;
     },
   },
@@ -247,6 +300,14 @@ async function playScenario(scenario: Scenario) {
 
   for (let turn = 0; turn < scenario.maxTurns; turn += 1) {
     let text: string;
+    if (scenario.pauseBefore?.turn === turn) {
+      const owner = new pg.Pool({ connectionString: process.env.FIRMO_TEST_OWNER_URL, max: 1 });
+      await owner.query(
+        `update conversations set updated_at = now() - make_interval(hours => $2) where sender = $1`,
+        [sender, scenario.pauseBefore.hours],
+      );
+      await owner.end();
+    }
     if (scenario.messages) {
       text = scenario.messages[turn] ?? '';
     } else {

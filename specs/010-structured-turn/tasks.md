@@ -7,3 +7,4 @@
 - [x] T005 Summary keeps what is known next to what is missing
 - [x] T006 Tests: scripted journeys, memory, isolation, validation; eval with real conversations
 - [x] T007 Decision 0003; README; roadmap
+- [x] T008 Resuming after a greeting or a pause; starting a new document on request
