@@ -1,10 +1,10 @@
 import { formatMoney } from '@/features/documents';
 import * as m from '@/paraglide/messages.js';
-import { missingOf, totalsOf, type WorkingDraft } from './draft';
+import { totalsOf, type WorkingDraft } from './draft';
 
 /**
  * The draft as the person reads it — every amount written by the code, from the code's
- * calculation — and as the model reads it, with the ids it names elements by.
+ * calculation, never by the model.
  */
 export type ChatLocale = 'fr' | 'en';
 
@@ -47,6 +47,18 @@ export function summaryForPerson(draft: WorkingDraft, locale: ChatLocale = 'fr')
               quantity: number(line.quantity, locale),
               price: money(line.unit_price, locale),
             },
+            { locale },
+          ),
+        );
+      } else if (line.quantity !== null) {
+        // What he said stays in sight; only what is missing is marked.
+        lines.push(
+          m.chat_line_price_missing({ label, quantity: number(line.quantity, locale) }, { locale }),
+        );
+      } else if (line.unit_price !== null) {
+        lines.push(
+          m.chat_line_quantity_missing(
+            { label, price: money(line.unit_price, locale) },
             { locale },
           ),
         );
@@ -94,49 +106,4 @@ export function summaryForPerson(draft: WorkingDraft, locale: ChatLocale = 'fr')
     if (value) lines.push(m.chat_summary_detail({ label, value }, { locale }));
   }
   return lines.join('\n');
-}
-
-/** The draft for the model: ids, values, what is missing — compact, no presentation. */
-export function draftForModel(draft: WorkingDraft | null): string {
-  if (!draft) return 'Aucun brouillon actif.';
-  const out = [
-    `type=${draft.document_type} objet=${draft.subject ?? '∅'} client=${draft.client_name ?? '∅'}`,
-  ];
-  for (const section of draft.sections) {
-    out.push(`${section.id} section "${section.title ?? ''}" sous-total=${section.show_subtotal}`);
-    for (const line of section.lines) {
-      out.push(
-        `  ${line.id} "${line.label}" unité=${line.unit ?? '∅'} qté=${line.quantity ?? '∅'} pu=${line.unit_price ?? '∅'} forfait=${line.flat_amount ?? '∅'}${line.calculated ? '' : ' (descriptive)'}`,
-      );
-    }
-  }
-  for (const adjustment of draft.adjustments) {
-    out.push(
-      `${adjustment.id} ajustement "${adjustment.label}" ${adjustment.mode} valeur=${adjustment.value ?? '∅'} signe=${adjustment.sign} base=${adjustment.base}`,
-    );
-  }
-  const facts = {
-    chantier: draft.site,
-    délai: draft.delivery_text,
-    garantie: draft.warranty_text,
-    validité: draft.validity_days,
-    tva: draft.tax_rate,
-    acompte: draft.deposit_percent,
-    conditions: draft.conditions.join(' | ') || null,
-  };
-  out.push(
-    Object.entries(facts)
-      .filter(([, value]) => value)
-      .map(([key, value]) => `${key}=${value}`)
-      .join(' ') || 'aucune condition',
-  );
-  const missing = missingOf(draft).map((item) =>
-    'lineId' in item
-      ? `${item.kind}:${item.lineId}`
-      : 'adjustmentId' in item
-        ? `valeur:${item.adjustmentId}`
-        : item.kind,
-  );
-  out.push(`manquant=${missing.join(',') || 'rien'}`);
-  return out.join('\n');
 }

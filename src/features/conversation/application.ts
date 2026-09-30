@@ -1,17 +1,9 @@
-import { z } from 'zod';
 import { DocumentError, type Documents } from '@/features/documents';
 import type { Identity, SenderProof } from '@/features/identity';
 import * as m from '@/paraglide/messages.js';
 import type { Transaction } from '@/platform/db';
 import { inOrganization } from '@/platform/tenancy';
-import {
-  EvidenceError,
-  missingOf,
-  numbersIn,
-  saidText,
-  toDraftInput,
-  type WorkingDraft,
-} from './draft';
+import { missingOf, toDraftInput, type Missing, type WorkingDraft } from './draft';
 import {
   loadConversation,
   recordUsage,
@@ -20,29 +12,31 @@ import {
 } from './infrastructure/conversations';
 import { INSTRUCTIONS } from './instructions';
 import type {
+  ConversationMessage,
   ConversationModel,
   InboundMessage,
   MessagingChannel,
-  ModelTool,
   OutboundAction,
-  ToolCall,
   TurnUsage,
   UsageEvents,
 } from './ports';
-import { draftForModel, summaryForPerson, type ChatLocale } from './summary';
+import { summaryForPerson, type ChatLocale } from './summary';
 import {
-  addToDraft,
-  changeDraft,
-  jsonSchemaOf,
-  removeFromDraft,
-  TOOLS,
-  type ToolName,
-} from './tools';
+  sameDraft,
+  strictJsonSchema,
+  toDraftOutput,
+  toWorkingDraft,
+  turnOutput,
+  type TurnOutput,
+} from './turn';
 
 /**
- * The conversation: a bounded agent. One model turn per message; the model acts only through
- * tools, each a use case with its guard; the code writes every amount the person reads, and
- * every reply goes to the sender of the message it answers — nobody else (constitution III).
+ * The conversation (spec 010, decision 0003). One model call per message: the model reads the
+ * sender's own conversation and answers with one structured output — its reply, the draft as it
+ * now understands it, and at most one action. The code validates it, keeps the state, runs the
+ * action with its rules (issuance only after a proposal and a yes, the plans, the numbering),
+ * computes every amount and writes the summary. Every reply goes to the sender of the message it
+ * answers — nobody else (constitution III).
  */
 export interface ConversationDeps {
   model: ConversationModel;
@@ -59,17 +53,12 @@ type Outgoing =
   | { kind: 'document'; pdf: Uint8Array; filename: string; caption: string };
 
 export const ISSUE_CONFIRM = 'issue:confirm';
+export const ISSUE_CANCEL = 'issue:cancel';
 /** Refusals of the plans (spec 007): the code answers them, with the way to subscribe. */
 const PLAN_REFUSALS = new Set(['plan_required', 'quota_reached', 'plans_unavailable']);
-export const ISSUE_CANCEL = 'issue:cancel';
-const AFFIRMATIVE =
-  /\b(oui|ouais|ok|okay|d'?accord|vas[- ]y|valide|valid[ée]|c'?est bon|[ée]mets?|confirme|yes|go)\b/i;
-
-const toolList: ModelTool[] = Object.entries(TOOLS).map(([name, tool]) => ({
-  name,
-  description: tool.description,
-  parameters: jsonSchemaOf(tool.args),
-}));
+/** The exchanges the model reads: enough for a document, never a past document's prices. */
+export const MAX_EXCHANGES = 10;
+const SCHEMA = strictJsonSchema(turnOutput);
 
 export function createConversation(deps: ConversationDeps) {
   const locale = deps.locale ?? 'fr';
@@ -119,6 +108,71 @@ export function createConversation(deps: ConversationDeps) {
     return '';
   }
 
+  /** What the code knows and the model must take as given, with the person's new message. */
+  async function stateFor(
+    actor: { organizationId: string },
+    state: ConversationState,
+    text: string,
+  ): Promise<string> {
+    const profile = await deps.documents.profile(actor);
+    const recent = (await deps.documents.list(actor, 20))
+      .filter((d) => d.state !== 'draft')
+      .slice(0, 5)
+      .map((d) => `${d.type} ${d.number ?? ''} pour ${d.clientName} (${d.subject}, ${d.state})`);
+    const missing = state.draft ? missingOf(state.draft).map(describeMissing) : [];
+    return [
+      '[État tenu par Firmo — fait foi]',
+      `Nom d'émetteur : ${profile?.name ?? 'pas encore donné'}`,
+      `Émission proposée en attente de sa réponse : ${state.pendingIssue ? 'oui' : 'non'}`,
+      `Documents émis récents : ${recent.join(' ; ') || 'aucun'}`,
+      `Brouillon en cours : ${state.draft ? JSON.stringify(toDraftOutput(state.draft)) : 'aucun'}`,
+      `Ce qui manque au brouillon : ${missing.join(', ') || 'rien'}`,
+      '',
+      '[Son message]',
+      text,
+    ].join('\n');
+  }
+
+  /**
+   * One structured decision of the model. A schema error or a draft the code cannot accept goes
+   * back to the model once, with what to fix; then the turn falls back to a neutral reply.
+   */
+  async function decide(
+    messages: ConversationMessage[],
+    safetyId: string,
+    usage: TurnUsage[],
+  ): Promise<{ output: TurnOutput; draft: WorkingDraft | null } | null> {
+    const conversation = [...messages];
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const result = await deps.model.decide({
+        instructions: INSTRUCTIONS,
+        messages: conversation,
+        schema: SCHEMA,
+        schemaName: 'firmo_turn',
+        safetyId,
+      });
+      usage.push(result.usage);
+      const parsed = turnOutput.safeParse(result.output);
+      const problems: string[] = [];
+      if (parsed.success) {
+        if (!parsed.data.draft) return { output: parsed.data, draft: null };
+        const converted = toWorkingDraft(parsed.data.draft);
+        if (converted.draft) return { output: parsed.data, draft: converted.draft };
+        problems.push(...converted.problems);
+      } else {
+        problems.push(...parsed.error.issues.map((i) => `${i.path.join('.')} : ${i.message}`));
+      }
+      conversation.push(
+        { role: 'firmo', text: JSON.stringify(result.output) },
+        {
+          role: 'person',
+          text: `[Firmo] Ta sortie est à corriger : ${problems.join(' ; ')}. Rends-la corrigée.`,
+        },
+      );
+    }
+    return null;
+  }
+
   return {
     /**
      * Handles one verified inbound message. Returns the sender's organization once known, for
@@ -163,6 +217,7 @@ export function createConversation(deps: ConversationDeps) {
         return { organizationId: actor.organizationId, usage };
       }
 
+      // This sender's own conversation, in her organization: nobody else's is ever read.
       const state = await inOrganization(actor.organizationId, (tx) =>
         loadConversation(tx, actor.organizationId, message.channel, message.sender),
       );
@@ -170,8 +225,8 @@ export function createConversation(deps: ConversationDeps) {
 
       if (message.kind === 'action') {
         await channel.acknowledgeAction?.(message);
-        if (message.action === ISSUE_CONFIRM) await turn.confirmIssue(true);
-        else if (message.action === ISSUE_CANCEL) turn.cancelIssue();
+        if (message.action === ISSUE_CONFIRM) await turn.confirmIssue();
+        else if (message.action === ISSUE_CANCEL) turn.cancelIssue(true);
         await inOrganization(actor.organizationId, (tx) => saveConversation(tx, turn.state));
         await deliver(channel, to, turn.outbox);
         return { organizationId: actor.organizationId, usage };
@@ -185,33 +240,20 @@ export function createConversation(deps: ConversationDeps) {
         await channel.sendText(to, m.chat_unsupported({}, { locale }));
         return { organizationId: actor.organizationId, usage };
       }
-      const profile = await deps.documents.profile(actor);
-      const latest = await deps.documents.latestIssued(actor);
-      const input = [
-        `Nom d'émetteur : ${profile?.name ?? 'pas encore donné (à demander avant le premier aperçu)'}`,
-        `Émission proposée en attente de confirmation : ${turn.state.pendingIssue ? 'oui' : 'non'}`,
-        `Dernier document émis : ${latest ? `${latest.type} ${latest.number ?? ''} pour ${latest.clientName}` : 'aucun'}`,
-        'Échanges récents :',
-        ...(turn.state.history.length
-          ? turn.state.history.map((h) => `- Personne : ${h.person}\n  Firmo : ${h.firmo}`)
-          : ['- aucun']),
-        'Brouillon :',
-        draftForModel(turn.state.draft),
-        '',
-        `Dernier message de la personne :\n${text}`,
-      ].join('\n');
 
-      const result = await deps.model.runTurn(
-        { instructions: INSTRUCTIONS, input, tools: toolList, safetyId: actor.organizationId },
-        (call) => turn.execute(call, text),
-      );
-      usage.push(result.usage);
-      const reply = guardReply(result.reply, text, turn.state.draft, locale);
-      turn.finish(text, reply);
+      const messages: ConversationMessage[] = [
+        ...turn.state.history.flatMap((h): ConversationMessage[] => [
+          { role: 'person', text: h.person },
+          { role: 'firmo', text: h.firmo },
+        ]),
+        { role: 'person', text: await stateFor(actor, turn.state, text) },
+      ];
+      const decision = await decide(messages, actor.organizationId, usage);
+      if (decision) await turn.apply(decision.output, decision.draft);
+      else turn.say(m.chat_fallback_reply({}, { locale }));
       // Said at first use, not buried in terms: what is kept, and what is not.
-      if (sender.status === 'new') {
-        turn.outbox.push({ kind: 'text', text: m.chat_privacy_note({}, { locale }) });
-      }
+      if (sender.status === 'new') turn.say(m.chat_privacy_note({}, { locale }));
+      turn.remember(text);
       await inOrganization(actor.organizationId, async (tx) => {
         await saveConversation(tx, turn.state);
         await costOf(tx, actor.organizationId, message.channel, turn.workedOn(), usage);
@@ -235,30 +277,12 @@ export function createConversation(deps: ConversationDeps) {
 
 export type Conversation = ReturnType<typeof createConversation>;
 
-/**
- * The model's reply may not state an amount the code did not produce: a large number absent from
- * the person's message and from the draft replaces the reply with a neutral one.
- */
-export function guardReply(
-  reply: string,
-  message: string,
-  draft: WorkingDraft | null,
-  locale: ChatLocale,
-): string {
-  const trimmed = reply.trim();
-  if (!trimmed) return m.chat_fallback_reply({}, { locale });
-  const known = new Set(numbersIn(message));
-  if (draft) {
-    for (const line of draft.sections.flatMap((s) => s.lines)) {
-      for (const value of [line.quantity, line.unit_price, line.flat_amount])
-        if (value) known.add(value);
-    }
-    for (const adjustment of draft.adjustments) if (adjustment.value) known.add(adjustment.value);
-  }
-  const invented = numbersIn(trimmed).filter(
-    (n) => n.replace('.', '').length >= 4 && !known.has(n),
-  );
-  return invented.length > 0 ? m.chat_fallback_reply({}, { locale }) : trimmed;
+/** A missing element, as the model and the person read it. */
+function describeMissing(item: Missing): string {
+  if (item.kind === 'quantity') return `quantité de « ${item.label} »`;
+  if (item.kind === 'unit_price') return `prix unitaire de « ${item.label} »`;
+  if (item.kind === 'adjustment_value') return `valeur de « ${item.label} »`;
+  return { items: 'postes chiffrés', client_name: 'client', subject: 'objet' }[item.kind];
 }
 
 // --- One turn ------------------------------------------------------------------------------------
@@ -274,7 +298,8 @@ function createTurn(input: {
   const state: ConversationState = structuredClone(input.state);
   const outbox: Outgoing[] = [];
   let draftChanged = false;
-  let lastMessage = '';
+  /** The code asked or answered itself: the model's reply would repeat it. */
+  let codeAnswered = false;
   let issuedId: number | null = null;
 
   const typeLabel = (type: 'quote' | 'proforma' | 'invoice') =>
@@ -284,29 +309,42 @@ function createTurn(input: {
       invoice: m.chat_type_invoice({}, { locale }),
     })[type];
 
-  const ok = (extra: Record<string, unknown> = {}) =>
-    JSON.stringify({ ok: true, ...extra, brouillon: draftForModel(state.draft) });
-  const refused = (reason: string, extra: Record<string, unknown> = {}) =>
-    JSON.stringify({ ok: false, raison: reason, ...extra });
+  const say = (text: string) => outbox.push({ kind: 'text', text });
 
-  function resetDraft() {
+  /** The code's own question, when an action cannot be done yet. */
+  function ask(text: string) {
+    say(text);
+    codeAnswered = true;
+  }
+
+  function resetDocument() {
     state.draft = null;
     state.documentId = null;
     state.pendingIssue = null;
+    // A new document starts a new exchange: a past document's prices never reach the next one.
+    state.history = [];
   }
 
-  /** The draft as a document draft, previewed: its exact snapshot hash and PDF. */
-  async function prepare(): Promise<
-    { documentId: number; sha256: string; pdf: Uint8Array } | string
-  > {
+  /** The draft as a document draft, previewed — or the code asks what is missing. */
+  async function prepare(): Promise<{
+    documentId: number;
+    sha256: string;
+    pdf: Uint8Array;
+  } | null> {
     const draft = state.draft;
-    if (!draft || draft.sections.length === 0) return 'rien à prévisualiser : aucun poste chiffré';
-    const missing = missingOf(draft);
-    if (missing.length > 0)
-      return `informations manquantes : ${missing.map((item) => item.kind).join(', ')}`;
-    const profile = await deps.documents.profile(actor);
-    if (!profile)
-      return `nom d'émetteur manquant : demande « ${m.chat_ask_issuer_name({}, { locale })} »`;
+    if (!draft) {
+      ask(m.chat_need_items({}, { locale }));
+      return null;
+    }
+    const [missing] = missingOf(draft);
+    if (missing) {
+      ask(m.chat_need({ what: describeMissing(missing) }, { locale }));
+      return null;
+    }
+    if (!(await deps.documents.profile(actor))) {
+      ask(m.chat_ask_issuer_name({}, { locale }));
+      return null;
+    }
     const draftInput = toDraftInput(draft);
     if (state.documentId !== null) {
       try {
@@ -321,14 +359,18 @@ function createTurn(input: {
     return { documentId: state.documentId, sha256: preview.sha256, pdf: preview.pdf };
   }
 
-  function proposal(documentId: number, sha256: string, pdf: Uint8Array) {
-    state.pendingIssue = { documentId, sha256 };
+  function sendPreview(pdf: Uint8Array) {
     outbox.push({
       kind: 'document',
       pdf,
       filename: 'apercu.pdf',
       caption: m.chat_preview_caption({}, { locale }),
     });
+  }
+
+  function propose(documentId: number, sha256: string, pdf: Uint8Array) {
+    state.pendingIssue = { documentId, sha256 };
+    sendPreview(pdf);
     outbox.push({
       kind: 'text',
       text: m.chat_issue_proposal({}, { locale }),
@@ -337,213 +379,180 @@ function createTurn(input: {
         { id: ISSUE_CANCEL, label: m.chat_issue_cancel_button({}, { locale }) },
       ],
     });
+    codeAnswered = true;
   }
 
-  async function confirmIssue(pressed: boolean): Promise<string> {
+  /** Issuance: only the proposed document, exactly as previewed (its hash), within the plans. */
+  async function confirmIssue(): Promise<void> {
     const pending = state.pendingIssue;
-    if (!pending) return refused('aucune émission proposée : utilise propose_issue');
-    if (!pressed && !AFFIRMATIVE.test(lastMessage)) {
-      return refused("la personne n'a pas confirmé explicitement l'émission");
-    }
+    if (!pending) return;
     try {
       const issued = await deps.documents.issue(actor, pending.documentId, {
         sha256: pending.sha256,
       });
       const document = await deps.documents.get(actor, pending.documentId);
       const pdf = issued.pdf ?? (await deps.documents.pdf(actor, pending.documentId)).pdf;
-      const caption = m.chat_issued_caption(
-        { type: typeLabel(document.type), number: issued.number },
-        { locale },
-      );
       outbox.push({
         kind: 'document',
         pdf,
         filename: `${issued.number.replace(/[/\\]/g, '-')}.pdf`,
-        caption,
+        caption: m.chat_issued_caption(
+          { type: typeLabel(document.type), number: issued.number },
+          { locale },
+        ),
       });
       issuedId = pending.documentId;
-      resetDraft();
-      return ok({ emis: issued.number });
+      resetDocument();
     } catch (error) {
       if (error instanceof DocumentError && PLAN_REFUSALS.has(error.code)) {
-        // The proposal stays pending: once subscribed, "oui" issues it. The code writes the way.
+        // The proposal stays pending: once subscribed, "oui" issues it.
         const link =
           error.code === 'plans_unavailable'
             ? null
             : await deps.identity.spaceLink(personId, '/espace/abonnement');
-        const text =
+        ask(
           error.code === 'plan_required'
             ? m.chat_plan_required({ url: link?.url ?? '' }, { locale })
             : error.code === 'quota_reached'
               ? m.chat_quota_reached({ url: link?.url ?? '' }, { locale })
-              : m.chat_plans_unavailable({}, { locale });
-        outbox.push({ kind: 'text', text });
-        return refused(error.code, { note: 'le code a envoyé le message et le lien' });
+              : m.chat_plans_unavailable({}, { locale }),
+        );
+        return;
       }
       if (error instanceof DocumentError) {
         state.pendingIssue = null;
-        return refused(
-          error.code === 'draft_changed' ? 'le brouillon a changé : propose à nouveau' : error.code,
-        );
+        ask(m.chat_issue_changed({}, { locale }));
+        return;
       }
       throw error;
     }
   }
 
-  const handlers: Record<ToolName, (args: unknown, message: string) => Promise<string>> = {
-    async add_to_draft(args, message) {
-      state.draft = addToDraft(state.draft, TOOLS.add_to_draft.args.parse(args), message);
-      if ((args as { start_new?: boolean }).start_new) {
-        state.documentId = null;
+  /** An issued document by its number, or the latest one. */
+  async function issuedDocument(number: string | null) {
+    if (!number) return deps.documents.latestIssued(actor);
+    const wanted = number.trim().toLowerCase();
+    const found = (await deps.documents.list(actor, 200)).find(
+      (d) => d.state !== 'draft' && d.number?.toLowerCase() === wanted,
+    );
+    return found ?? null;
+  }
+
+  async function sendLink(path: string) {
+    const link = await deps.identity.spaceLink(personId, path);
+    say(m.chat_space_link({ url: link.url }, { locale }));
+  }
+
+  async function act(output: TurnOutput) {
+    switch (output.action) {
+      case 'none':
+        return;
+      case 'show_preview': {
+        const prepared = await prepare();
+        if (prepared) sendPreview(prepared.pdf);
+        return;
       }
-      state.pendingIssue = null;
-      draftChanged = true;
-      return ok();
-    },
-    async change_draft(args, message) {
-      if (!state.draft) return refused('aucun brouillon actif');
-      state.draft = changeDraft(state.draft, TOOLS.change_draft.args.parse(args), message);
-      state.pendingIssue = null;
-      draftChanged = true;
-      return ok();
-    },
-    async remove_from_draft(args) {
-      if (!state.draft) return refused('aucun brouillon actif');
-      state.draft = removeFromDraft(state.draft, TOOLS.remove_from_draft.args.parse(args).ids);
-      state.pendingIssue = null;
-      draftChanged = true;
-      return ok();
-    },
-    async set_issuer_name(args, message) {
-      const name = saidText(TOOLS.set_issuer_name.args.parse(args).name, message);
-      if (!name) return refused('nom vide');
-      await deps.documents.setIssuerName(actor, name);
-      return ok({ nom: name });
-    },
-    async start_new_document() {
-      resetDraft();
-      return ok();
-    },
-    async show_preview() {
-      const prepared = await prepare();
-      if (typeof prepared === 'string') return refused(prepared);
-      outbox.push({
-        kind: 'document',
-        pdf: prepared.pdf,
-        filename: 'apercu.pdf',
-        caption: m.chat_preview_caption({}, { locale }),
-      });
-      return ok({ apercu_envoye: true });
-    },
-    async propose_issue() {
-      const prepared = await prepare();
-      if (typeof prepared === 'string') return refused(prepared);
-      proposal(prepared.documentId, prepared.sha256, prepared.pdf);
-      return ok({ proposition_envoyee: true, note: 'le code a envoyé l’aperçu et les boutons' });
-    },
-    async confirm_issue() {
-      return confirmIssue(false);
-    },
-    async send_latest_pdf() {
-      const latest = await deps.documents.latestIssued(actor);
-      if (!latest?.number) return refused('aucun document émis');
-      const { pdf } = await deps.documents.pdf(actor, latest.id);
-      const caption = m.chat_issued_caption(
-        { type: typeLabel(latest.type), number: latest.number },
-        { locale },
-      );
-      outbox.push({
-        kind: 'document',
-        pdf,
-        filename: `${latest.number.replace(/[/\\]/g, '-')}.pdf`,
-        caption,
-      });
-      return ok({ envoye: latest.number });
-    },
-    async convert_latest(args) {
-      const { target } = TOOLS.convert_latest.args.parse(args);
-      const latest = await deps.documents.latestIssued(actor);
-      if (!latest) return refused('aucun document émis à convertir');
-      const converted = await deps.documents.convert(actor, latest.id, target);
-      const preview = await deps.documents.preview(actor, converted);
-      state.draft = null;
-      state.documentId = converted;
-      proposal(converted, preview.sha256, preview.pdf);
-      return ok({ converti_depuis: latest.number, proposition_envoyee: true });
-    },
-    async find_documents(args) {
-      const query = TOOLS.find_documents.args.parse(args).query.toLowerCase();
-      const all = await deps.documents.list(actor, 200);
-      const found = all
-        .filter((d) =>
-          [d.clientName, d.subject, d.number ?? ''].some((v) => v.toLowerCase().includes(query)),
-        )
-        .slice(0, 5)
-        .map((d) => ({
-          type: d.type,
-          numero: d.number ?? 'brouillon',
-          client: d.clientName,
-          objet: d.subject,
-          date: d.documentDate,
-        }));
-      return JSON.stringify({ ok: true, trouves: found });
-    },
-    async open_space(args) {
-      const { page } = TOOLS.open_space.args.parse(args);
-      const path = {
-        home: '/espace',
-        documents: '/espace/documents',
-        presentation: '/espace/presentation',
-        subscription: '/espace/abonnement',
-      }[page];
-      const link = await deps.identity.spaceLink(personId, path);
-      outbox.push({ kind: 'text', text: m.chat_space_link({ url: link.url }, { locale }) });
-      return ok({ lien_envoye: true });
-    },
-  };
+      case 'propose_issue': {
+        const prepared = await prepare();
+        if (prepared) propose(prepared.documentId, prepared.sha256, prepared.pdf);
+        return;
+      }
+      case 'confirm_issue':
+        return confirmIssue();
+      case 'cancel_issue':
+        state.pendingIssue = null;
+        return;
+      case 'send_pdf': {
+        const document = await issuedDocument(output.document_number);
+        if (!document?.number) {
+          ask(m.chat_document_not_found({}, { locale }));
+          return;
+        }
+        const { pdf } = await deps.documents.pdf(actor, document.id);
+        outbox.push({
+          kind: 'document',
+          pdf,
+          filename: `${document.number.replace(/[/\\]/g, '-')}.pdf`,
+          caption: m.chat_issued_caption(
+            { type: typeLabel(document.type), number: document.number },
+            { locale },
+          ),
+        });
+        return;
+      }
+      case 'convert_to_proforma':
+      case 'convert_to_invoice': {
+        const document = await issuedDocument(output.document_number);
+        if (!document) {
+          ask(m.chat_document_not_found({}, { locale }));
+          return;
+        }
+        const target = output.action === 'convert_to_invoice' ? 'invoice' : 'proforma';
+        try {
+          const converted = await deps.documents.convert(actor, document.id, target);
+          const preview = await deps.documents.preview(actor, converted);
+          resetDocument();
+          state.documentId = converted;
+          propose(converted, preview.sha256, preview.pdf);
+        } catch (error) {
+          if (!(error instanceof DocumentError)) throw error;
+          ask(m.chat_convert_refused({}, { locale }));
+        }
+        return;
+      }
+      case 'open_space':
+        return sendLink('/espace');
+      case 'open_documents':
+        return sendLink('/espace/documents');
+      case 'open_presentation':
+        return sendLink('/espace/presentation');
+      case 'open_subscription':
+        return sendLink('/espace/abonnement');
+    }
+  }
 
   return {
     state,
     outbox,
+    say,
+    confirmIssue,
+    cancelIssue(pressed: boolean) {
+      state.pendingIssue = null;
+      if (pressed) say(m.chat_issue_cancelled({}, { locale }));
+    },
     /** The document this turn worked on — to count what the model cost for each document. */
     workedOn: () => issuedId ?? state.pendingIssue?.documentId ?? state.documentId,
-    confirmIssue: (pressed: boolean) => confirmIssue(pressed),
-    cancelIssue() {
-      state.pendingIssue = null;
-      outbox.push({ kind: 'text', text: m.chat_issue_cancelled({}, { locale }) });
-    },
-    async execute(call: ToolCall, message: string): Promise<string> {
-      lastMessage = message;
-      const handler = handlers[call.name as ToolName];
-      if (!handler) return refused(`outil inconnu : ${call.name}`);
-      let args: unknown;
-      try {
-        args = JSON.parse(call.arguments || '{}');
-      } catch {
-        return refused('arguments illisibles');
+
+    /** The model's decision, applied in order: name, document, draft, action, then its reply. */
+    async apply(output: TurnOutput, draft: WorkingDraft | null) {
+      const name = output.issuer_name?.trim();
+      if (name) await deps.documents.setIssuerName(actor, name);
+      if (output.new_document) resetDocument();
+      if (draft && !sameDraft(draft, state.draft)) {
+        state.draft = draft;
+        // A changed draft is not the one previewed: its proposal is void.
+        state.pendingIssue = null;
+        draftChanged = true;
       }
-      try {
-        return await handler(args, message);
-      } catch (error) {
-        if (error instanceof EvidenceError) return refused(error.message);
-        if (error instanceof z.ZodError) return refused('arguments invalides');
-        if (error instanceof DocumentError) return refused(error.code);
-        throw error;
-      }
-    },
-    /**
-     * Closes the turn, in reading order: the code's summary when the draft changed, then what the
-     * tools produced (PDFs, the issuance question with its buttons, links), then the model's
-     * reply — left out when the issuance question already asks the only thing to ask.
-     */
-    finish(message: string, reply: string) {
+      await act(output);
       if (draftChanged && state.draft) {
         outbox.unshift({ kind: 'text', text: summaryForPerson(state.draft, locale) });
       }
-      const asksAlready = outbox.some((item) => item.kind === 'text' && item.actions?.length);
-      if (!asksAlready) outbox.push({ kind: 'text', text: reply });
-      state.history.push({ person: message.slice(0, 500), firmo: reply.slice(0, 500) });
-      state.history = state.history.slice(-12);
+      const reply = output.reply.trim();
+      if (reply && !codeAnswered) say(reply);
+    },
+
+    /** The exchange, as the person saw it: links are never kept, documents by their caption. */
+    remember(text: string) {
+      const firmo = outbox
+        .map((item) =>
+          item.kind === 'text'
+            ? item.text.replace(/https?:\/\/\S+/g, '[lien]')
+            : `[PDF : ${item.caption}]`,
+        )
+        .join('\n');
+      state.history.push({ person: text.slice(0, 1500), firmo: firmo.slice(0, 1500) });
+      state.history = state.history.slice(-MAX_EXCHANGES);
     },
   };
 }

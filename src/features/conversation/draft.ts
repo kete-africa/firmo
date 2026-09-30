@@ -1,13 +1,11 @@
 import { calculateDocument, Dec, type DraftInput } from '@/features/documents';
 
 /**
- * The working draft of a conversation: what Firmo understood so far, before it becomes a
- * document. Every element has a stable id (S1, L3, A1) the agent names to change it — never a
- * position. Numbers are decimal text; each one entered the draft with words of the person's own
- * message that contain it (constitution I).
+ * The working draft of a conversation: the document as the model understood it from the whole
+ * conversation, rewritten by the model in full each time something changes (spec 010). Numbers
+ * are canonical decimal text; the code computes every total from them.
  */
 export interface DraftLine {
-  id: string;
   label: string;
   description: string | null;
   unit: string | null;
@@ -19,14 +17,12 @@ export interface DraftLine {
 }
 
 export interface DraftSection {
-  id: string;
   title: string | null;
   show_subtotal: boolean;
   lines: DraftLine[];
 }
 
 export interface DraftAdjustment {
-  id: string;
   label: string;
   mode: 'percent' | 'fixed';
   value: string | null;
@@ -49,84 +45,6 @@ export interface WorkingDraft {
   validity_days: string | null;
   tax_rate: string | null;
   deposit_percent: string | null;
-  /** The next free number for ids. */
-  next_id: number;
-}
-
-export const EMPTY_DRAFT: WorkingDraft = {
-  document_type: 'quote',
-  subject: null,
-  client_name: null,
-  client_phone: null,
-  client_address: null,
-  sections: [],
-  adjustments: [],
-  site: null,
-  delivery_text: null,
-  warranty_text: null,
-  conditions: [],
-  validity_days: null,
-  tax_rate: null,
-  deposit_percent: null,
-  next_id: 1,
-};
-
-// --- Evidence --------------------------------------------------------------------------------
-
-const squash = (text: string) =>
-  text
-    .normalize('NFC')
-    .toLowerCase()
-    .replace(/[\s\u00a0\u202f]+/g, ' ')
-    .trim();
-
-/** "20 000", "20.000 F", "12,5" in running text → "20000", "12.5". */
-export function numbersIn(text: string): string[] {
-  const found: string[] = [];
-  for (const match of text.matchAll(/\d[\d\s\u00a0\u202f.,]*/g)) {
-    let raw = match[0].replace(/[\s\u00a0\u202f]+$/, '').replace(/[.,]$/, '');
-    raw = raw.replace(/[\s\u00a0\u202f]/g, '');
-    // "20.000" or "1.250.000": dots grouping thousands; "12,5" or "12.5": a decimal part.
-    if (/^\d{1,3}(\.\d{3})+$/.test(raw)) raw = raw.replace(/\./g, '');
-    else if (/^\d{1,3}(,\d{3})+$/.test(raw)) raw = raw.replace(/,/g, '');
-    else raw = raw.replace(',', '.');
-    if (/^\d+(\.\d+)?$/.test(raw)) found.push(new Dec(raw).toFixed());
-  }
-  return found;
-}
-
-export class EvidenceError extends Error {}
-
-/**
- * A number enters the draft only if its evidence is words of the message, and those words
- * contain that very number. Returns its canonical text.
- */
-export function provenNumber(
-  value: string | null | undefined,
-  evidence: string | null | undefined,
-  message: string,
-): string | null {
-  if (value === null || value === undefined || value === '') return null;
-  const cleaned = value.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
-  if (!/^\d+(\.\d+)?$/.test(cleaned)) throw new EvidenceError(`not a number: ${value}`);
-  const canonical = new Dec(cleaned).toFixed();
-  if (!evidence || !squash(message).includes(squash(evidence))) {
-    throw new EvidenceError(`the evidence of ${canonical} is not in the message`);
-  }
-  if (!numbersIn(evidence).includes(canonical)) {
-    throw new EvidenceError(`${canonical} is not in its evidence`);
-  }
-  return canonical;
-}
-
-/** Text the person said (a name, a place): it must be in her message, apart from case. */
-export function saidText(value: string | null | undefined, message: string): string | null {
-  const text = value?.trim();
-  if (!text) return null;
-  if (!squash(message).includes(squash(text))) {
-    throw new EvidenceError(`"${text}" is not in the message`);
-  }
-  return text;
 }
 
 // --- Completeness ----------------------------------------------------------------------------
@@ -135,8 +53,8 @@ export type Missing =
   | { kind: 'items' }
   | { kind: 'client_name' }
   | { kind: 'subject' }
-  | { kind: 'quantity' | 'unit_price'; lineId: string; label: string }
-  | { kind: 'adjustment_value'; adjustmentId: string; label: string };
+  | { kind: 'quantity' | 'unit_price'; label: string }
+  | { kind: 'adjustment_value'; label: string };
 
 /** Everything still to ask, in order; the agent asks the first, one question at a time. */
 export function missingOf(draft: WorkingDraft): Missing[] {
@@ -146,19 +64,14 @@ export function missingOf(draft: WorkingDraft): Missing[] {
   if (!draft.client_name?.trim()) missing.push({ kind: 'client_name' });
   for (const line of draft.sections.flatMap((section) => section.lines)) {
     if (!line.calculated || line.flat_amount !== null) continue;
-    if (line.quantity === null)
-      missing.push({ kind: 'quantity', lineId: line.id, label: line.label });
+    if (line.quantity === null) missing.push({ kind: 'quantity', label: line.label });
     else if (line.unit_price === null) {
-      missing.push({ kind: 'unit_price', lineId: line.id, label: line.label });
+      missing.push({ kind: 'unit_price', label: line.label });
     }
   }
   for (const adjustment of draft.adjustments) {
     if (adjustment.value === null) {
-      missing.push({
-        kind: 'adjustment_value',
-        adjustmentId: adjustment.id,
-        label: adjustment.label,
-      });
+      missing.push({ kind: 'adjustment_value', label: adjustment.label });
     }
   }
   if (!draft.subject?.trim()) missing.push({ kind: 'subject' });

@@ -5,10 +5,12 @@ import { afterAll, describe, expect, it } from 'vitest';
 import {
   createConversation,
   ISSUE_CONFIRM,
+  type ConversationMessage,
   type ConversationModel,
+  type DraftOutput,
   type InboundMessage,
   type MessagingChannel,
-  type ToolCall,
+  type TurnOutput,
 } from '@/features/conversation';
 import { createDocuments } from '@/features/documents';
 import { createIdentity, type AccountDirectory } from '@/features/identity';
@@ -16,9 +18,11 @@ import { getPool } from '@/platform/db';
 import { typstRenderer } from '@/platform/typst';
 import { purgeOrganizations } from './support/cleanup';
 
-// Phase 3: the conversation, end to end below the channels — a scripted model stands for the AI;
-// the database, the documents and Typst are real. What is proven here is the code's part: the
-// guards, the summaries, the issuance, and that a reply only ever goes to its sender.
+// Spec 010: the conversation, end to end below the channels — a scripted model stands for the AI
+// (its structured output, one per message); the database, the documents and Typst are real. What
+// is proven here is the code's part: the state it keeps per sender, what the model reads, the
+// validation, the summaries, the issuance, and that a reply only ever goes to its sender.
+// The model's own understanding is proven with the real model: pnpm eval:conversation.
 
 const run = randomBytes(3).toString('hex');
 const owner = new pg.Pool({ connectionString: process.env.FIRMO_TEST_OWNER_URL, max: 1 });
@@ -65,11 +69,25 @@ function recordingChannel(channel: 'whatsapp' | 'telegram') {
   return { adapter, sent };
 }
 
-type Step = { calls: { name: string; args: unknown }[]; reply: string };
+/** A structured output, with the fields a step leaves out at their neutral value. */
+const out = (step: Partial<TurnOutput>): TurnOutput => ({
+  reply: '',
+  draft: null,
+  new_document: false,
+  issuer_name: null,
+  action: 'none',
+  document_number: null,
+  ...step,
+});
 
-/** The AI, scripted: each turn makes the given tool calls, then replies. */
-function scriptedModel(steps: Step[]) {
-  const results: string[][] = [];
+type Step = Partial<TurnOutput> | 'not a turn';
+
+/**
+ * The AI, scripted: each call answers the next step — or, given a function, answers from the
+ * conversation it reads. Every conversation it was given is kept, to prove what it reads.
+ */
+function scriptedModel(steps: Step[] | ((messages: ConversationMessage[]) => Step)) {
+  const read: ConversationMessage[][] = [];
   const model: ConversationModel = {
     async transcribeAudio() {
       return { text: 'transcription', usage: { inputTokens: 0, outputTokens: 0, modelCalls: 1 } };
@@ -77,23 +95,17 @@ function scriptedModel(steps: Step[]) {
     async transcribeImage() {
       return { text: 'lecture', usage: { inputTokens: 0, outputTokens: 0, modelCalls: 1 } };
     },
-    async runTurn(_request, execute) {
-      const step = steps.shift();
-      if (!step) throw new Error('no scripted turn left');
-      const turn: string[] = [];
-      for (const call of step.calls) {
-        turn.push(
-          await execute({
-            name: call.name,
-            arguments: JSON.stringify(call.args),
-          } satisfies ToolCall),
-        );
-      }
-      results.push(turn);
-      return { reply: step.reply, usage: { inputTokens: 1, outputTokens: 1, modelCalls: 1 } };
+    async decide(request) {
+      read.push(structuredClone(request.messages));
+      const step = typeof steps === 'function' ? steps(request.messages) : steps.shift();
+      if (step === undefined) throw new Error('no scripted turn left');
+      return {
+        output: step === 'not a turn' ? { reply: 42 } : out(step),
+        usage: { inputTokens: 1, outputTokens: 1, modelCalls: 1 },
+      };
     },
   };
-  return { model, results };
+  return { model, read };
 }
 
 const text = (sender: string, words: string): InboundMessage => ({
@@ -107,59 +119,53 @@ const text = (sender: string, words: string): InboundMessage => ({
 
 const sale =
   "Devis pour M. Kodjo, portail : 12 barres de tube 80x40 à 18 000 F, la tôle 4 feuilles à 32.000, main d'oeuvre 25 %";
-const saleArgs = {
-  start_new: false,
+
+const line = (label: string, unit: string | null, quantity: number, unitPrice: number) => ({
+  label,
+  description: null,
+  unit,
+  quantity,
+  unit_price: unitPrice,
+  flat_amount: null,
+  descriptive: false,
+});
+
+const saleDraft: DraftOutput = {
   document_type: 'quote',
+  subject: 'Portail',
   client_name: 'M. Kodjo',
   client_phone: null,
   client_address: null,
-  subject: 'Portail',
   site: null,
-  delivery_text: null,
-  warranty_text: null,
-  conditions: [],
+  delivery: null,
+  warranty: null,
   validity_days: null,
   tax_rate: null,
   deposit_percent: null,
+  conditions: [],
   sections: [
     {
-      title: 'Portail',
-      show_subtotal: true,
-      lines: [
-        {
-          label: 'Tube 80x40',
-          description: null,
-          unit: 'barre',
-          quantity: { value: '12', evidence: '12 barres' },
-          unit_price: { value: '18000', evidence: '18 000 F' },
-          flat_amount: null,
-          descriptive: false,
-        },
-        {
-          label: 'Tôle',
-          description: null,
-          unit: 'feuille',
-          quantity: { value: '4', evidence: '4 feuilles' },
-          unit_price: { value: '32000', evidence: 'à 32.000' },
-          flat_amount: null,
-          descriptive: false,
-        },
-      ],
+      title: null,
+      show_subtotal: false,
+      lines: [line('Tube 80x40', 'barre', 12, 18000), line('Tôle', 'feuille', 4, 32000)],
     },
   ],
   adjustments: [
-    {
-      label: "Main-d'œuvre",
-      mode: 'percent',
-      sign: 1,
-      base: 'items_total',
-      value: { value: '25', evidence: "main d'oeuvre 25 %" },
-    },
+    { label: "Main-d'œuvre", kind: 'percent', value: 25, direction: 'add', base: 'items_total' },
   ],
 };
 
+/** The sale with the sheet at another price. */
+function withSheetAt(price: number): DraftOutput {
+  const draft = structuredClone(saleDraft);
+  const sheet = draft.sections[0]?.lines[1];
+  if (sheet) sheet.unit_price = price;
+  return draft;
+}
+
 const documents = createDocuments({ renderer: typstRenderer(), files: memoryStorage() });
 const identity = createIdentity({ directory, publicUrl: 'https://firmo.test' });
+const phone = (offset: number) => `2289${String(Date.now() + offset).slice(-7)}`;
 
 afterAll(async () => {
   await purgeOrganizations(owner, organizations);
@@ -168,32 +174,14 @@ afterAll(async () => {
 });
 
 describe('a quote, from a sale said to an issued PDF', () => {
-  const number = `2289${String(Date.now()).slice(-7)}`;
+  const number = phone(0);
   const { adapter, sent } = recordingChannel('whatsapp');
-  const { model, results } = scriptedModel([
-    { calls: [{ name: 'add_to_draft', args: saleArgs }], reply: 'Je prépare le PDF ?' },
-    {
-      calls: [
-        {
-          name: 'change_draft',
-          args: {
-            changes: [{ id: 'L2', field: 'unit_price', value: '35000', evidence: '35 000' }],
-          },
-        },
-      ],
-      reply: 'C’est corrigé.',
-    },
-    {
-      calls: [{ name: 'propose_issue', args: {} }],
-      reply: 'Sous quel nom veux-tu que ce devis parte ?',
-    },
-    {
-      calls: [
-        { name: 'set_issuer_name', args: { name: 'Atelier Kodjo' } },
-        { name: 'propose_issue', args: {} },
-      ],
-      reply: 'Voici l’aperçu.',
-    },
+  const { model, read } = scriptedModel([
+    { draft: saleDraft, reply: 'Je prépare le PDF ?' },
+    { draft: withSheetAt(35000), reply: 'C’est corrigé.' },
+    { action: 'propose_issue', reply: 'Je te prépare le PDF.' },
+    { issuer_name: 'Atelier Kodjo', action: 'propose_issue', reply: 'Voici l’aperçu.' },
+    { action: 'open_space', reply: 'Voici ton lien.' },
   ]);
   const conversation = createConversation({
     model,
@@ -202,7 +190,7 @@ describe('a quote, from a sale said to an issued PDF', () => {
     documents,
   });
 
-  it("shows what it read, with the code's total, before composing anything", async () => {
+  it("shows what it understood, with the code's total, before composing anything", async () => {
     await conversation.handle(text(number, sale));
     expect(sent.every((s) => s.to === number)).toBe(true);
     expect(sent[0]?.text).toContain('Total : 430 000 F CFA');
@@ -210,17 +198,23 @@ describe('a quote, from a sale said to an issued PDF', () => {
     expect(sent.some((s) => s.document)).toBe(false);
   });
 
-  it('applies a correction said in natural language', async () => {
+  it('applies a correction, and the model read the whole exchange before it', async () => {
     sent.length = 0;
     await conversation.handle(text(number, "non la tôle c'est 35 000"));
     expect(sent[0]?.text).toContain('Total : 445 000 F CFA');
+    const second = read[1] ?? [];
+    expect(second.map((m) => m.role)).toEqual(['person', 'firmo', 'person']);
+    expect(second[0]?.text).toBe(sale);
+    // What the person saw — the code's summary — is what the model remembers Firmo said.
+    expect(second[1]?.text).toContain('Total : 430 000 F CFA');
+    expect(second[2]?.text).toContain('"unit_price":18000');
+    expect(second[2]?.text).toContain("non la tôle c'est 35 000");
   });
 
-  it('asks the only question before a first document: the name it leaves under', async () => {
+  it('asks the issuer name itself before a first document, instead of the model', async () => {
     sent.length = 0;
     await conversation.handle(text(number, 'prépare le pdf final'));
-    expect(JSON.parse(results.at(-1)?.[0] ?? '{}')).toMatchObject({ ok: false });
-    expect(sent.some((s) => s.document)).toBe(false);
+    expect(sent.map((s) => s.text)).toEqual(['Sous quel nom veux-tu que ce devis parte ?']);
   });
 
   it('shows the exact preview and waits for a confirmation', async () => {
@@ -228,6 +222,8 @@ describe('a quote, from a sale said to an issued PDF', () => {
     await conversation.handle(text(number, 'Atelier Kodjo'));
     expect(sent.find((s) => s.document)?.document).toContain('apercu.pdf');
     expect(sent.find((s) => s.actions)?.actions).toContain(ISSUE_CONFIRM);
+    // The code's question with its buttons is the only question: the model's reply is not added.
+    expect(sent.some((s) => s.text === 'Voici l’aperçu.')).toBe(false);
   });
 
   it('issues on the confirmation button, with its final number', async () => {
@@ -238,6 +234,20 @@ describe('a quote, from a sale said to an issued PDF', () => {
     );
   });
 
+  it('starts the next document afresh: no past price, and never a sign-in link, in memory', async () => {
+    sent.length = 0;
+    await conversation.handle(text(number, 'envoie-moi le lien de mon espace'));
+    expect(sent[0]?.text).toContain('https://compte.test/l/');
+    const { rows } = await owner.query<{ history: { person: string; firmo: string }[] }>(
+      'select history from conversations where sender = $1',
+      [number],
+    );
+    const history = rows[0]?.history ?? [];
+    expect(history.map((h) => h.person)).toEqual(['envoie-moi le lien de mon espace']);
+    expect(history[0]?.firmo).toContain('[lien]');
+    expect(history[0]?.firmo).not.toContain('https://');
+  });
+
   it('counts what the model cost, per turn and for the document it worked on', async () => {
     const organizationId = organizations.at(-1) ?? '';
     const { rows } = await owner.query<{ turns: string; calls: string; documents: string }>(
@@ -245,22 +255,91 @@ describe('a quote, from a sale said to an issued PDF', () => {
        from ai_usage where organization_id = $1`,
       [organizationId],
     );
-    expect(rows[0]).toMatchObject({ turns: '4', calls: '4' });
+    expect(rows[0]).toMatchObject({ turns: '5', calls: '5' });
     expect(Number(rows[0]?.documents)).toBeGreaterThan(0);
+  });
+});
+
+describe('what the model understands becomes the draft as is', () => {
+  it('a quantity said in words, and one group per item when he asks for it', async () => {
+    const number = phone(1);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const grouped: DraftOutput = {
+      ...saleDraft,
+      adjustments: [],
+      sections: [
+        { title: 'Tube', show_subtotal: true, lines: [line('Tube 80x40', 'barre', 12, 18000)] },
+        {
+          title: 'Tube annelé',
+          show_subtotal: true,
+          lines: [line('Tube annelé', null, 1, 140000)],
+        },
+      ],
+    };
+    const { model } = scriptedModel([{ draft: grouped, reply: 'C’est ajouté.' }]);
+    await createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    }).handle(
+      text(number, "Ajoute un tube annellé à 140000. J'aimerais que chacun soit dans un groupe"),
+    );
+    const summary = sent[0]?.text ?? '';
+    expect(summary).toContain('Tube annelé\n• Tube annelé : 1 × 140 000 F CFA');
+    expect(summary).toContain('Total : 356 000 F CFA');
+  });
+});
+
+describe('the output is checked, and sent back once when it is wrong', () => {
+  it('a line priced two ways goes back to the model with what to fix', async () => {
+    const number = phone(2);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const wrong = structuredClone(saleDraft);
+    const tube = wrong.sections[0]?.lines[0];
+    if (tube) tube.flat_amount = 200000;
+    const { model, read } = scriptedModel([
+      { draft: wrong, reply: 'Noté.' },
+      { draft: saleDraft, reply: 'Noté.' },
+    ]);
+    await createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    }).handle(text(number, sale));
+    expect(read[1]?.at(-1)?.text).toContain('un forfait, ou une quantité et un prix, pas les deux');
+    expect(sent[0]?.text).toContain('Total : 430 000 F CFA');
+  });
+
+  it('twice wrong: nothing changes, and a neutral reply', async () => {
+    const number = phone(3);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const { model } = scriptedModel(['not a turn', 'not a turn']);
+    await createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    }).handle(text(number, sale));
+    expect(sent[0]?.text).toBe("C'est noté. Dis-moi la suite.");
+    const { rows } = await owner.query<{ draft: unknown }>(
+      'select draft from conversations where sender = $1',
+      [number],
+    );
+    expect(rows[0]?.draft).toBeNull();
   });
 });
 
 describe('the plans (spec 007)', () => {
   it('beyond what was bought, the code sends the way to subscribe and keeps the proposal', async () => {
-    const number = `2289${String(Date.now() + 1).slice(-7)}`;
+    const number = phone(4);
     const { adapter, sent } = recordingChannel('whatsapp');
     const { model } = scriptedModel([
       {
-        calls: [
-          { name: 'add_to_draft', args: saleArgs },
-          { name: 'set_issuer_name', args: { name: 'Atelier Kodjo' } },
-          { name: 'propose_issue', args: {} },
-        ],
+        draft: saleDraft,
+        issuer_name: 'Atelier Kodjo',
+        action: 'propose_issue',
         reply: 'Voici l’aperçu.',
       },
     ]);
@@ -288,15 +367,12 @@ describe('the plans (spec 007)', () => {
   });
 });
 
-describe('the guards', () => {
-  it('refuses a price that was not said, and the draft stays untouched', async () => {
-    const number = `2289${String(Date.now() + 1).slice(-7)}`;
+describe('issuance', () => {
+  it('never happens without a proposal, whatever the model decides', async () => {
+    const number = phone(5);
     const { adapter, sent } = recordingChannel('whatsapp');
-    const invented = structuredClone(saleArgs);
-    const line = invented.sections[0]?.lines[1];
-    if (line) line.unit_price = { value: '20000', evidence: 'à 32.000' };
-    const { model, results } = scriptedModel([
-      { calls: [{ name: 'add_to_draft', args: invented }], reply: 'Quel est le prix de la tôle ?' },
+    const { model } = scriptedModel([
+      { draft: saleDraft, issuer_name: 'M. Kodjo', action: 'confirm_issue', reply: 'Émis.' },
     ]);
     await createConversation({
       model,
@@ -304,39 +380,20 @@ describe('the guards', () => {
       identity,
       documents,
     }).handle(text(number, sale));
-    expect(JSON.parse(results[0]?.[0] ?? '{}')).toMatchObject({ ok: false });
-    // No summary: the draft did not change. Then, at first use, what is kept and what is not.
-    expect(sent[0]?.text).toBe('Quel est le prix de la tôle ?');
-    expect(sent[1]?.text).toContain('ne sont pas conservés');
-    expect(sent).toHaveLength(2);
+    expect(sent.some((s) => s.document)).toBe(false);
+    const { rows } = await owner.query<{ n: string }>(
+      "select count(*) as n from documents where organization_id = $1 and state <> 'draft'",
+      [organizations.at(-1)],
+    );
+    expect(rows[0]?.n).toBe('0');
   });
 
-  it('never lets the reply state an amount the code did not compute', async () => {
-    const number = `2289${String(Date.now() + 2).slice(-7)}`;
+  it('a draft changed after the preview voids the proposal', async () => {
+    const number = phone(6);
     const { adapter, sent } = recordingChannel('whatsapp');
-    const { model } = scriptedModel([{ calls: [], reply: 'Ton total fera 999 999 F, promis.' }]);
-    await createConversation({
-      model,
-      channels: { whatsapp: adapter },
-      identity,
-      documents,
-    }).handle(text(number, 'bonjour'));
-    expect(sent[0]?.text).not.toContain('999');
-  });
-
-  it('issues nothing when the person did not say yes', async () => {
-    const number = `2289${String(Date.now() + 3).slice(-7)}`;
-    const { adapter, sent } = recordingChannel('whatsapp');
-    const { model, results } = scriptedModel([
-      {
-        calls: [
-          { name: 'add_to_draft', args: saleArgs },
-          { name: 'set_issuer_name', args: { name: 'M. Kodjo' } },
-          { name: 'propose_issue', args: {} },
-        ],
-        reply: 'On émet ?',
-      },
-      { calls: [{ name: 'confirm_issue', args: {} }], reply: 'D’accord.' },
+    const { model } = scriptedModel([
+      { draft: saleDraft, issuer_name: 'M. Kodjo', action: 'propose_issue', reply: '' },
+      { draft: withSheetAt(35000), action: 'confirm_issue', reply: 'Émis.' },
     ]);
     const conversation = createConversation({
       model,
@@ -346,45 +403,32 @@ describe('the guards', () => {
     });
     await conversation.handle(text(number, sale));
     sent.length = 0;
-    await conversation.handle(text(number, 'attends, je réfléchis'));
-    expect(JSON.parse(results[1]?.[0] ?? '{}')).toMatchObject({ ok: false });
+    await conversation.handle(text(number, 'oui mais la tôle à 35 000'));
     expect(sent.some((s) => s.document)).toBe(false);
+    expect(sent[0]?.text).toContain('Total : 445 000 F CFA');
   });
 });
 
 describe('two senders at once', () => {
-  it('each gets only his own replies and his own draft', async () => {
-    const a = `2289${String(Date.now() + 4).slice(-7)}`;
-    const b = `2289${String(Date.now() + 5).slice(-7)}`;
+  it('each model call reads only its sender, and each gets only his own replies', async () => {
+    const a = phone(7);
+    const b = phone(8);
     const { adapter, sent } = recordingChannel('whatsapp');
     const otherSale = 'Devis pour Mme Afi : porte en bois 1 à 150 000 F';
-    const otherArgs = {
-      ...saleArgs,
+    const otherDraft: DraftOutput = {
+      ...saleDraft,
       client_name: 'Mme Afi',
       subject: 'Porte',
-      sections: [
-        {
-          title: null,
-          show_subtotal: false,
-          lines: [
-            {
-              label: 'Porte en bois',
-              description: null,
-              unit: null,
-              quantity: { value: '1', evidence: 'porte en bois 1' },
-              unit_price: { value: '150000', evidence: '150 000 F' },
-              flat_amount: null,
-              descriptive: false,
-            },
-          ],
-        },
-      ],
       adjustments: [],
+      sections: [
+        { title: null, show_subtotal: false, lines: [line('Porte en bois', null, 1, 150000)] },
+      ],
     };
-    const { model } = scriptedModel([
-      { calls: [{ name: 'add_to_draft', args: saleArgs }], reply: 'Pour A.' },
-      { calls: [{ name: 'add_to_draft', args: otherArgs }], reply: 'Pour B.' },
-    ]);
+    const { model, read } = scriptedModel((messages) =>
+      messages.at(-1)?.text.includes('Mme Afi')
+        ? { draft: otherDraft, reply: 'Pour B.' }
+        : { draft: saleDraft, reply: 'Pour A.' },
+    );
     const conversation = createConversation({
       model,
       channels: { whatsapp: adapter },
@@ -395,18 +439,19 @@ describe('two senders at once', () => {
       conversation.handle(text(a, sale)),
       conversation.handle(text(b, otherSale)),
     ]);
-    const toA = sent
-      .filter((s) => s.to === a)
-      .map((s) => s.text ?? '')
-      .join('\n');
-    const toB = sent
-      .filter((s) => s.to === b)
-      .map((s) => s.text ?? '')
-      .join('\n');
-    expect(toA).toContain('Tube 80x40');
-    expect(toA).not.toContain('Porte en bois');
-    expect(toB).toContain('Porte en bois');
-    expect(toB).not.toContain('Tube 80x40');
+    const to = (who: string) =>
+      sent
+        .filter((s) => s.to === who)
+        .map((s) => s.text ?? '')
+        .join('\n');
+    expect(to(a)).toContain('Tube 80x40');
+    expect(to(a)).not.toContain('Porte en bois');
+    expect(to(b)).toContain('Porte en bois');
+    expect(to(b)).not.toContain('Tube 80x40');
+    for (const conversationRead of read) {
+      const all = conversationRead.map((m) => m.text).join('\n');
+      expect(all.includes('Mme Afi') && all.includes('M. Kodjo')).toBe(false);
+    }
   });
 });
 

@@ -237,5 +237,12 @@
   "ops_reason": "Reason",
   "ops_read": "Read the document",
   "ops_journal": "Reading journal",
-  "ops_journal_empty": "No reading yet."
+  "ops_journal_empty": "No reading yet.",
+  "chat_need_items": "First tell me what to price.",
+  "chat_need": "I still need: {what}.",
+  "chat_issue_changed": "The draft changed since the preview: ask me again for the final document and I will show you the new preview.",
+  "chat_document_not_found": "I cannot find that issued document. Give me its number as written on the PDF.",
+  "chat_convert_refused": "This document cannot be converted: only an issued, accepted or pending quote or proforma can.",
+  "chat_line_price_missing": "• {label}: {quantity} × price to be specified",
+  "chat_line_quantity_missing": "• {label}: quantity to be specified × {price}"
 }

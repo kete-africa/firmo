@@ -3,11 +3,10 @@ import type { ConversationModel, TurnUsage } from '@/features/conversation';
 
 /**
  * The OpenAI adapter of the conversation's model port: speech-to-text for voice notes, a
- * word-for-word reading of photographed sheets, and one agent turn with strict function tools
- * (Responses API). Nothing is stored at OpenAI (`store: false`); reasoning travels encrypted
- * between the calls of one turn.
+ * word-for-word reading of photographed sheets, and one conversation turn as a strict structured
+ * output (Responses API, spec 010). Nothing is stored at OpenAI (`store: false`): the
+ * conversation lives in Firmo's database, one per sender.
  */
-const MAX_TOOL_ROUNDS = 5;
 
 export interface OpenAIOptions {
   apiKey?: string;
@@ -87,41 +86,38 @@ export function openaiModel(options: OpenAIOptions = {}): ConversationModel {
       return { text, usage };
     },
 
-    async runTurn(request, execute) {
+    async decide(request) {
+      const response = await client.responses.create({
+        model,
+        instructions: request.instructions,
+        input: request.messages.map((message) =>
+          message.role === 'person'
+            ? { role: 'user' as const, content: message.text }
+            : { role: 'assistant' as const, content: message.text },
+        ),
+        text: {
+          format: {
+            type: 'json_schema',
+            name: request.schemaName,
+            schema: request.schema,
+            strict: true,
+          },
+        },
+        reasoning: { effort },
+        store: false,
+        // The instructions and the schema are the same for every turn: cached by the API.
+        prompt_cache_key: request.schemaName,
+        safety_identifier: request.safetyId,
+      });
       const usage = zero();
-      const tools = request.tools.map((tool) => ({
-        type: 'function' as const,
-        name: tool.name,
-        description: tool.description,
-        parameters: tool.parameters,
-        strict: true,
-      }));
-      let input: OpenAI.Responses.ResponseInput = [{ role: 'user', content: request.input }];
-      for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-        const response = await client.responses.create({
-          model,
-          instructions: request.instructions,
-          input,
-          tools,
-          reasoning: { effort },
-          store: false,
-          include: ['reasoning.encrypted_content'],
-          safety_identifier: request.safetyId,
-        });
-        add(usage, response);
-        const calls = response.output.filter(
-          (item): item is OpenAI.Responses.ResponseFunctionToolCall =>
-            item.type === 'function_call',
-        );
-        if (calls.length === 0) return { reply: response.output_text, usage };
-        input = [...input, ...(response.output as OpenAI.Responses.ResponseInput)];
-        for (const call of calls) {
-          const output = await execute({ name: call.name, arguments: call.arguments });
-          input.push({ type: 'function_call_output', call_id: call.call_id, output });
-        }
+      add(usage, response);
+      let output: unknown = null;
+      try {
+        output = JSON.parse(response.output_text);
+      } catch {
+        output = null;
       }
-      // Too many rounds: the code's guard answers with a neutral reply.
-      return { reply: '', usage };
+      return { output, usage };
     },
   };
 }

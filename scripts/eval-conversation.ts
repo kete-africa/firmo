@@ -3,9 +3,10 @@
  *
  *   pnpm eval:conversation [scenario-id]
  *
- * A second model plays the tradesman of each scenario (the reference's four dialogues); Firmo
- * answers through the real agent, on the Neon "test" branch, with a recording channel. The verdict
- * is the code's, on the resulting state — never a model's opinion. It also reports what each
+ * Two kinds of scenarios, on the Neon "test" branch with a recording channel: fixed messages —
+ * real conversations, word for word (spec 010) — and a second model playing a tradesman (the
+ * reference's four dialogues). Firmo answers through the real model. The verdict is the code's,
+ * on the resulting draft and documents — never a model's opinion. It also reports what each
  * conversation cost in model calls and tokens.
  */
 import { randomBytes } from 'node:crypto';
@@ -28,13 +29,41 @@ const { typstRenderer } = await import('../src/platform/typst');
 const { getPool } = await import('../src/platform/db');
 const { purgeOrganizations } = await import('../tests/support/cleanup');
 
+type Draft = {
+  sections: { title: string | null; lines: Record<string, string | null>[] }[];
+} | null;
+
 interface Scenario {
   id: string;
-  persona: string;
-  mission: string;
+  /** Fixed messages, sent as written; otherwise a second model plays `persona`. */
+  messages?: string[];
+  persona?: string;
+  mission?: string;
   maxTurns: number;
   /** The code's verdict on the final state. */
-  check(state: { documents: Awaited<ReturnType<typeof listAll>>; transcript: string[] }): string[];
+  check(state: {
+    documents: Awaited<ReturnType<typeof listAll>>;
+    transcript: string[];
+    draft: Draft;
+  }): string[];
+}
+
+/** The lines of a draft, as "label: quantity × price" or "label: flat". */
+function linesOf(draft: Draft): string[] {
+  return (draft?.sections ?? []).flatMap((s) =>
+    s.lines.map((l) =>
+      l.flat_amount
+        ? `${l.label}: ${l.flat_amount}`
+        : `${l.label}: ${l.quantity} × ${l.unit_price}`,
+    ),
+  );
+}
+
+/** Problems when a line whose label contains `name` is not `expected`. */
+function expectLine(draft: Draft, name: RegExp, expected: string): string[] {
+  const found = linesOf(draft).find((l) => name.test(l.split(':')[0] ?? ''));
+  if (!found) return [`no line ${String(name)} in ${JSON.stringify(linesOf(draft))}`];
+  return found.endsWith(`: ${expected}`) ? [] : [`${found} ≠ ${expected}`];
 }
 
 const run = randomBytes(3).toString('hex');
@@ -51,6 +80,68 @@ const issuedTotal = (doc: { snapshot: Record<string, unknown> | null }) =>
   (doc.snapshot?.document as Record<string, unknown> | undefined)?.grand_total;
 
 const SCENARIOS: Scenario[] = [
+  {
+    id: 'author-telegram',
+    // The author's own conversation on staging, word for word (2026-09-30).
+    messages: [
+      'Devis pour M. Kodjo, portail : 12 barres de tube à 18 000 F',
+      "Ajoute un tube annellé à 140000.\nJ'aimerais que chacun soit dans un groupe",
+    ],
+    maxTurns: 2,
+    check: ({ draft, transcript }) => {
+      const problems = [
+        ...expectLine(draft, /^tube$|barre|tube(?! ann)/i, '12 × 18000'),
+        ...expectLine(draft, /ann/i, '1 × 140000'),
+      ];
+      if ((draft?.sections.length ?? 0) < 2) problems.push('not one group per item');
+      const last = transcript.slice(
+        transcript.lastIndexOf(transcript.findLast((l) => l.startsWith('Personne')) ?? ''),
+      );
+      if (last.some((l) => /combien|quelle quantité|quel prix/i.test(l))) {
+        problems.push('asked again for what was said');
+      }
+      return problems;
+    },
+  },
+  {
+    id: 'words-and-pieces',
+    messages: [
+      'devis pour Mme Akakpo, douze sacs de ciment',
+      "à six mille cinq cents l'un",
+      'ajoute deux brouettes à 25 000',
+    ],
+    maxTurns: 3,
+    check: ({ draft }) => [
+      ...expectLine(draft, /ciment/i, '12 × 6500'),
+      ...expectLine(draft, /brouette/i, '2 × 25000'),
+    ],
+  },
+  {
+    id: 'correct-and-remove',
+    messages: [
+      'Devis Garage Sika : vidange 15000, filtre à huile 2 à 4500',
+      'enlève le filtre',
+      'finalement la vidange c est 18 000',
+    ],
+    maxTurns: 3,
+    check: ({ draft }) => {
+      const lines = linesOf(draft);
+      const problems = lines.some((l) => /filtre/i.test(l)) ? ['the filter is still there'] : [];
+      const oil = lines.find((l) => /vidange/i.test(l)) ?? '';
+      if (!/: (18000|1 × 18000)$/.test(oil)) problems.push(`${oil || 'no oil change'} ≠ 18000`);
+      return problems;
+    },
+  },
+  {
+    id: 'never-invents',
+    messages: ['devis pour Kossi : 3 portes en bois'],
+    maxTurns: 1,
+    check: ({ draft, transcript }) => {
+      const problems = expectLine(draft, /porte/i, '3 × null');
+      if (!transcript.some((l) => /prix/i.test(l))) problems.push('did not ask for the price');
+      return problems;
+    },
+  },
   {
     id: 'artisan-complete',
     persona:
@@ -155,13 +246,18 @@ async function playScenario(scenario: Scenario) {
   const cost = { modelCalls: 0, inputTokens: 0, outputTokens: 0 };
 
   for (let turn = 0; turn < scenario.maxTurns; turn += 1) {
-    const next = await person.responses.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-5.6-luna',
-      instructions: `Tu joues ${scenario.persona}, qui écrit à Firmo sur WhatsApp. Ta mission : ${scenario.mission}\nÉcris UNIQUEMENT ton prochain message, court et naturel, en français. Réponds à la dernière question de Firmo. Quand la mission est entièrement accomplie, écris exactement FIN.`,
-      input: transcript.length ? transcript.join('\n') : '(début de la conversation)',
-      store: false,
-    });
-    const text = next.output_text.trim();
+    let text: string;
+    if (scenario.messages) {
+      text = scenario.messages[turn] ?? '';
+    } else {
+      const next = await person.responses.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-5.6-luna',
+        instructions: `Tu joues ${scenario.persona}, qui écrit à Firmo sur WhatsApp. Ta mission : ${scenario.mission}\nÉcris UNIQUEMENT ton prochain message, court et naturel, en français. Réponds à la dernière question de Firmo. Quand la mission est entièrement accomplie, écris exactement FIN.`,
+        input: transcript.length ? transcript.join('\n') : '(début de la conversation)',
+        store: false,
+      });
+      text = next.output_text.trim();
+    }
     if (!text || text === 'FIN') break;
     transcript.push(`Personne : ${text}`);
     sent.length = 0;
@@ -180,9 +276,16 @@ async function playScenario(scenario: Scenario) {
     }
     for (const line of sent) transcript.push(`Firmo : ${line}`);
   }
+  const owner = new pg.Pool({ connectionString: process.env.FIRMO_TEST_OWNER_URL, max: 1 });
+  const { rows } = await owner.query<{ draft: Draft }>(
+    'select draft from conversations where sender = $1',
+    [sender],
+  );
+  await owner.end();
   const problems = scenario.check({
     documents: organizationId ? await listAll(organizationId) : [],
     transcript,
+    draft: rows[0]?.draft ?? null,
   });
   return { transcript, problems, cost };
 }

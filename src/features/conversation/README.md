@@ -3,23 +3,22 @@
 A tradesman writes, speaks or photographs his sale on WhatsApp or Telegram; Firmo reads it, shows
 what it understood, asks one question at a time, and issues the PDF once he says yes.
 
-## A bounded agent
+## One structured turn per message
 
-One model turn per message (decision 0002). The model acts only through **tools**, and each tool
-is a use case with its guard — the model proposes, the code checks and applies:
+Decision 0003. The model reads the sender's own conversation and answers with **one structured
+output** (`turn.ts`), enforced by the model's API and validated with Zod:
 
-| Tool                                                                | Guard                                                                                                      |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| `add_to_draft`                                                      | every number comes with words of **this** message that **contain** it; otherwise the whole call is refused |
-| `change_draft`                                                      | elements named by stable ids (`L3`, `S1`, `A2`); the client's name must be words of the message            |
-| `remove_from_draft`                                                 | only ids that exist                                                                                        |
-| `set_issuer_name`                                                   | the name must be words of the message                                                                      |
-| `show_preview`, `propose_issue`                                     | a complete draft and an issuer name; the preview's snapshot hash is kept                                   |
-| `confirm_issue`                                                     | an issuance was proposed **and** the person said yes (or pressed the button)                               |
-| `send_latest_pdf`, `convert_latest`, `find_documents`, `open_space` | the person's own organization only                                                                         |
+| Field                                   | What the code does with it                                                            |
+| --------------------------------------- | ------------------------------------------------------------------------------------- |
+| `draft`                                 | the whole draft as the model understands it; kept as is (null: unchanged)             |
+| `reply`                                 | sent after the code's own messages, unless the code already asked the only question   |
+| `action`                                | run with its rules: preview, propose/confirm/cancel the issuance, PDF, convert, links |
+| `issuer_name`, `new_document`, `number` | the issuer's name saved; a new document starts afresh; the document an action aims at |
 
-The code writes every amount the person reads (the summary, from the documents feature's exact
-calculation); the model's reply may not state a number the code did not produce (`guardReply`).
+What a schema cannot say — a line priced two ways, a percentage above 100 — goes back to the
+model once, with what to fix. An issuance happens only after a proposal and a yes (words or
+button), on the exact previewed draft, within the plans. The code writes every amount the person
+reads: the summary, from the documents feature's exact calculation.
 
 ```mermaid
 sequenceDiagram
@@ -32,18 +31,24 @@ sequenceDiagram
   C->>I: verified webhook → stored once
   I->>F: one sender at a time
   F->>M: transcription (voice, photo)
-  F->>M: the turn: context, draft with ids, message
-  M->>F: tool calls
-  F->>F: guards → draft, documents
-  M->>F: reply
+  F->>M: her last 10 exchanges + the state Firmo holds + her message
+  M->>F: one structured output (draft, reply, action)
+  F->>F: validate → draft, action with its rules, summary
   F->>C: summary (code), PDFs and buttons, reply — to the sender only
 ```
 
+## Memory
+
+One conversation per sender and channel, in her organization; nothing at the model's provider.
+The model reads her last 10 exchanges — what she wrote and what Firmo actually sent (links masked,
+PDFs by their caption) — and the state: issuer name, pending proposal, recent documents, the draft,
+what is missing. An issued or a new document starts the exchanges afresh.
+
 ## The working draft
 
-`draft.ts` — what was understood, before it becomes a document: sections, lines, adjustments,
-facts, each with an id. It is complete when it has priced lines, a client and a subject; the first
-missing item is the next question. It becomes a document draft only to be previewed or issued.
+`draft.ts` — sections, lines, adjustments, facts, as exact decimal text. It is complete when it
+has priced lines, a client and a subject; what is missing is shown in the summary and asked, one
+question at a time. It becomes a document draft only to be previewed or issued.
 
 ## Privacy
 
@@ -53,8 +58,11 @@ person's organization.
 
 ## Proof
 
-- `tests/conversation.test.ts` — journeys with a scripted model: a sale to an issued PDF, a price
-  that was not said, a reply with an invented total, no "yes" no issuance, two senders at once,
-  Telegram's contact.
-- `pnpm eval:conversation` — the reference's four dialogues with the real model; a second model
-  plays the tradesman, the code judges the final state and reports the cost per conversation.
+- `tests/conversation.test.ts` — with a scripted model: a sale to an issued PDF, what the model
+  reads (the exchange, the summary it was shown, the state), a draft sent back once then a neutral
+  reply, no issuance without a proposal, a changed draft voids the proposal, the plans, two
+  senders at once (each call reads only its sender), Telegram's contact.
+- `pnpm eval:conversation` — with the real model: real conversations word for word (the author's
+  « un tube annellé », numbers in words, corrections and removals, a price never invented) and the
+  reference's four dialogues played by a second model; the code judges the final state and
+  reports the cost.

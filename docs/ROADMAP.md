@@ -184,6 +184,27 @@ under three titles.
 
 ---
 
+## Phase 4.2 — One structured turn per message · `specs/010-structured-turn` · _delivered_
+
+### Objective
+
+Firmo understands the first time, answers fast, and keeps each person's conversation apart.
+
+### Scope
+
+- One model call per message with one structured output (draft, reply, action); the code keeps
+  the state, runs the actions with their rules and writes every amount (decision 0003, which
+  supersedes 0002: no more tools editing the draft, ids or re-reading of numbers).
+- Memory per sender: the last 10 exchanges as she saw them, afresh with each document.
+
+### Proof
+
+- `[agent]` Scripted journeys, memory and isolation (`tests/conversation.test.ts`).
+- `[agent]` The author's staging conversation and three others, word for word, with the real
+  model (`pnpm eval:conversation`).
+
+---
+
 ## Phase 5 — Plans and quota · `specs/007-plans` · _delivered_
 
 ### Objective

@@ -1,20 +1,20 @@
 // The public entry point of the conversation feature. Anything not exported here is internal.
 export {
   createConversation,
-  guardReply,
   ISSUE_CANCEL,
   ISSUE_CONFIRM,
+  MAX_EXCHANGES,
   type Conversation,
   type ConversationDeps,
 } from './application';
 export type {
   Channel,
+  ConversationMessage,
   ConversationModel,
   InboundMessage,
   MessagingChannel,
-  ModelTool,
   OutboundAction,
-  ToolCall,
   TurnUsage,
   UsageEvents,
 } from './ports';
+export type { DraftOutput, TurnAction, TurnOutput } from './turn';
