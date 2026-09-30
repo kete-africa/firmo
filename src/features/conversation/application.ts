@@ -46,6 +46,8 @@ export interface ConversationDeps {
   /** Kete Cockpit's events; without them, nothing is announced. */
   events?: UsageEvents;
   locale?: ChatLocale;
+  /** Tests: the clock a pause is measured with. */
+  now?: () => Date;
 }
 
 type Outgoing =
@@ -62,6 +64,7 @@ const SCHEMA = strictJsonSchema(turnOutput);
 
 export function createConversation(deps: ConversationDeps) {
   const locale = deps.locale ?? 'fr';
+  const now = deps.now ?? (() => new Date());
 
   function channelOf(message: InboundMessage): MessagingChannel {
     const channel = deps.channels[message.channel];
@@ -120,8 +123,10 @@ export function createConversation(deps: ConversationDeps) {
       .slice(0, 5)
       .map((d) => `${d.type} ${d.number ?? ''} pour ${d.clientName} (${d.subject}, ${d.state})`);
     const missing = state.draft ? missingOf(state.draft).map(describeMissing) : [];
+    const pause = state.history.length ? sinceText(state.lastActivityAt, now()) : 'première fois';
     return [
       '[État tenu par Firmo — fait foi]',
+      `Son dernier message avant celui-ci : ${pause}`,
       `Nom d'émetteur : ${profile?.name ?? 'pas encore donné'}`,
       `Émission proposée en attente de sa réponse : ${state.pendingIssue ? 'oui' : 'non'}`,
       `Documents émis récents : ${recent.join(' ; ') || 'aucun'}`,
@@ -276,6 +281,15 @@ export function createConversation(deps: ConversationDeps) {
 }
 
 export type Conversation = ReturnType<typeof createConversation>;
+
+/** How long ago, in words the model reads: « il y a 3 heures ». */
+export function sinceText(from: string, to: Date): string {
+  const minutes = Math.max(0, Math.round((to.getTime() - new Date(from).getTime()) / 60_000));
+  if (minutes < 60) return `il y a ${minutes} minute${minutes > 1 ? 's' : ''}`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 48) return `il y a ${hours} heure${hours > 1 ? 's' : ''}`;
+  return `il y a ${Math.round(hours / 24)} jours`;
+}
 
 /** A missing element, as the model and the person read it. */
 function describeMissing(item: Missing): string {

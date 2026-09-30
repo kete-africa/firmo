@@ -10,6 +10,8 @@ export interface ConversationState {
   documentId: number | null;
   pendingIssue: { documentId: number; sha256: string } | null;
   history: { person: string; firmo: string }[];
+  /** When she last wrote, before this message (ISO); what a pause is measured from. */
+  lastActivityAt: string;
 }
 
 export async function loadConversation(
@@ -22,7 +24,7 @@ export async function loadConversation(
     insert into conversations (organization_id, channel, sender)
     values (${organizationId}, ${channel}, ${sender}) on conflict do nothing`);
   const result = await tx.execute(sql`
-    select id, draft, document_id, pending_issue, history from conversations
+    select id, draft, document_id, pending_issue, history, updated_at from conversations
     where channel = ${channel} and sender = ${sender} for update`);
   const row = result.rows[0] as Record<string, unknown>;
   return {
@@ -31,6 +33,7 @@ export async function loadConversation(
     documentId: row.document_id === null ? null : Number(row.document_id),
     pendingIssue: (row.pending_issue as ConversationState['pendingIssue']) ?? null,
     history: (row.history as ConversationState['history']) ?? [],
+    lastActivityAt: new Date(row.updated_at as string | Date).toISOString(),
   };
 }
 

@@ -331,6 +331,59 @@ describe('the output is checked, and sent back once when it is wrong', () => {
   });
 });
 
+describe('resuming, and starting over', () => {
+  it('tells the model how long she was away', async () => {
+    const number = phone(9);
+    const { adapter } = recordingChannel('whatsapp');
+    let clock = new Date();
+    const { model, read } = scriptedModel([
+      { draft: saleDraft, reply: 'Noté.' },
+      { reply: 'Salut !' },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+      now: () => clock,
+    });
+    await conversation.handle(text(number, sale));
+    expect(read[0]?.at(-1)?.text).toContain('Son dernier message avant celui-ci : première fois');
+    clock = new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+    await conversation.handle(text(number, 'Cc'));
+    expect(read[1]?.at(-1)?.text).toContain('Son dernier message avant celui-ci : il y a 2 jours');
+  });
+
+  it('a new quote asked without its content sets the draft aside, and forgets its exchanges', async () => {
+    const number = phone(10);
+    const { adapter, sent } = recordingChannel('whatsapp');
+    const { model, read } = scriptedModel([
+      { draft: saleDraft, reply: 'Noté.' },
+      { new_document: true, reply: 'D’accord, que chiffre-t-on ?' },
+      { reply: 'Je t’écoute.' },
+    ]);
+    const conversation = createConversation({
+      model,
+      channels: { whatsapp: adapter },
+      identity,
+      documents,
+    });
+    await conversation.handle(text(number, sale));
+    sent.length = 0;
+    await conversation.handle(text(number, 'je veux commencer un nouveau devis'));
+    expect(sent.map((s) => s.text)).toEqual(['D’accord, que chiffre-t-on ?']);
+    const { rows } = await owner.query<{ draft: unknown }>(
+      'select draft from conversations where sender = $1',
+      [number],
+    );
+    expect(rows[0]?.draft).toBeNull();
+    await conversation.handle(text(number, 'une porte'));
+    const third = read[2] ?? [];
+    expect(third.map((m) => m.text).join('\n')).not.toContain('Tube 80x40');
+    expect(third[0]?.text).toBe('je veux commencer un nouveau devis');
+  });
+});
+
 describe('the plans (spec 007)', () => {
   it('beyond what was bought, the code sends the way to subscribe and keeps the proposal', async () => {
     const number = phone(4);

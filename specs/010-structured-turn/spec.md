@@ -29,6 +29,15 @@ looped on the quantity and the price. « L'IA a la mémoire ; pourquoi parser ? 
 2. **Given** an issued or a new document, **Then** the exchanges start afresh; a sign-in link is
    never kept in memory.
 
+### User Story 5 — Resuming, and starting over (P1)
+
+1. **Given** a draft in progress and « Cc », **Then** Firmo greets, recalls the document and asks
+   the one missing thing.
+2. **Given** more than a day since her last message, **Then** Firmo asks whether to continue this
+   document or start a new one.
+3. **Given** « nouveau devis », with or without its content, **Then** the draft in progress is set
+   aside and its exchanges forgotten.
+
 ### User Story 4 — Nothing final without her (P1)
 
 1. **Given** the model deciding to issue with no proposal, **Then** nothing is issued.
