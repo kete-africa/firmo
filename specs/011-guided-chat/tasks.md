@@ -5,5 +5,6 @@
 - [x] T003 « Annule » (migration 0010, `undo_last_change`)
 - [x] T004 Typing on WhatsApp and Telegram; the first message's example
 - [x] T005 Tests and real-model scenarios
-- [ ] T006 Lot 2: how his clients pay him, printed on invoices
+- [x] T006 Lot 2: how his clients pay him — asked once before the first invoice, editable in the
+      space, printed on invoices (migration 0011, template v5 with every level of the total)
 - [ ] T007 Lot 3: client book; « mes derniers documents »

@@ -262,7 +262,11 @@
   "chat_edit_hint": "Tell me what to change: a price, a quantity, a line to add or remove.",
   "chat_new_document": "All right, a new document. Send me your sale as a voice note or a text.",
   "chat_next_step": "What next?",
-  "chat_issued_forward": "Your {type} is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”.",
   "chat_undone": "I put back the previous version.",
-  "chat_nothing_to_undo": "There is no change to undo."
+  "chat_nothing_to_undo": "There is no change to undo.",
+  "profile_payment": "How to pay you (printed on your invoices)",
+  "chat_ask_payment": "Shall I print on your invoices how to pay you? Give for example your mobile money number, or answer “no”.",
+  "chat_issued_forward_quote": "Your quote is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”.",
+  "chat_issued_forward_proforma": "Your proforma is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”.",
+  "chat_issued_forward_invoice": "Your invoice is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”."
 }

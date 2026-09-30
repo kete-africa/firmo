@@ -316,6 +316,8 @@ function action(name: TurnOutput['action']): TurnOutput {
     draft: null,
     new_document: false,
     issuer_name: null,
+    payment_instructions: null,
+    payment_declined: false,
     action: name,
     document_number: null,
   };
@@ -453,6 +455,8 @@ function createTurn(input: {
       });
       issuedId = pending.documentId;
       justIssued = { type: document.type, client: document.clientName };
+      // The code says what happened, and what comes next: the model's reply would repeat it.
+      codeAnswered = true;
       resetDocument();
     } catch (error) {
       if (error instanceof DocumentError && PLAN_REFUSALS.has(error.code)) {
@@ -489,6 +493,17 @@ function createTurn(input: {
     return found ?? null;
   }
 
+  /**
+   * Before his first invoice, Firmo asks once how his clients pay him (spec 011, lot 2): the
+   * answer is printed on his invoices. True when it asked.
+   */
+  async function paymentToAsk(): Promise<boolean> {
+    const profile = await deps.documents.profile(actor);
+    if (!profile || profile.paymentAsked) return false;
+    ask(m.chat_ask_payment({}, { locale }));
+    return true;
+  }
+
   async function sendLink(path: string) {
     const link = await deps.identity.spaceLink(personId, path);
     say(m.chat_space_link({ url: link.url }, { locale }));
@@ -504,6 +519,7 @@ function createTurn(input: {
         return;
       }
       case 'propose_issue': {
+        if (state.draft?.document_type === 'invoice' && (await paymentToAsk())) return;
         const prepared = await prepare();
         if (prepared) propose(prepared.documentId, prepared.sha256, prepared.pdf);
         return;
@@ -552,6 +568,7 @@ function createTurn(input: {
           return;
         }
         const target = output.action === 'convert_to_invoice' ? 'invoice' : 'proforma';
+        if (target === 'invoice' && (await paymentToAsk())) return;
         try {
           const converted = await deps.documents.convert(actor, document.id, target);
           const preview = await deps.documents.preview(actor, converted);
@@ -598,10 +615,11 @@ function createTurn(input: {
       actions.push({ id: NEW_DOCUMENT, label: m.chat_button_new({}, { locale }) });
       outbox.push({
         kind: 'text',
-        text: m.chat_issued_forward(
-          { type: typeLabel(justIssued.type), client: justIssued.client },
-          { locale },
-        ),
+        text: {
+          quote: m.chat_issued_forward_quote,
+          proforma: m.chat_issued_forward_proforma,
+          invoice: m.chat_issued_forward_invoice,
+        }[justIssued.type]({ client: justIssued.client }, { locale }),
         actions,
       });
       return;
@@ -629,6 +647,13 @@ function createTurn(input: {
     async apply(output: TurnOutput, draft: WorkingDraft | null, options: { first: boolean }) {
       const name = output.issuer_name?.trim();
       if (name) await deps.documents.setIssuerName(actor, name);
+      const payment = output.payment_instructions?.trim();
+      if (payment || output.payment_declined) {
+        // Without a profile yet, the issuer name is asked first; the payment waits for it.
+        await deps.documents.setPaymentInstructions(actor, payment || null).catch((error) => {
+          if (!(error instanceof DocumentError)) throw error;
+        });
+      }
       if (output.new_document) resetDocument();
       if (draft && !sameDraft(draft, state.draft)) {
         // The version before this change is what « annule » brings back.

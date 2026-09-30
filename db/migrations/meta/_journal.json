@@ -78,6 +78,13 @@
       "when": 1790700000010,
       "tag": "0010_previous_draft",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790700000011,
+      "tag": "0011_payment_instructions",
+      "breakpoints": true
     }
   ]
 }

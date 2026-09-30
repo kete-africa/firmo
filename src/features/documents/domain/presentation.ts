@@ -24,6 +24,8 @@ export interface Header {
   brandColor?: string | null;
   /** True when a logo is attached to the rendering. */
   hasLogo?: boolean;
+  /** How his clients pay him: printed on an invoice only. */
+  paymentInstructions?: string | null;
 }
 
 export interface DocumentFacts {
@@ -104,6 +106,8 @@ export function documentPayload(facts: DocumentFacts, header: Header): Record<st
       color: header.brandColor ?? DEFAULT_COLOR,
       mark: issuerName.charAt(0).toLocaleUpperCase('fr') || 'F',
       logo: header.hasLogo ?? false,
+      // How to pay: an invoice claims payment; a quote or a proforma does not.
+      ...(invoice && header.paymentInstructions ? { payment: header.paymentInstructions } : {}),
     },
     client: {
       name: capitalizeInitial(facts.client.name),

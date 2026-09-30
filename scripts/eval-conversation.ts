@@ -242,6 +242,24 @@ const SCENARIOS: Scenario[] = [
         : ['no buttons under the complete draft'],
   },
   {
+    id: 'invoice-asks-payment',
+    messages: [
+      'Facture pour Mme Akakpo, objet ciment : 3 sacs de ciment à 6 500. Au nom de Boutique Afi',
+      'fais le document final',
+      'Flooz 96 00 00 00',
+    ],
+    maxTurns: 3,
+    check: ({ transcript }) => {
+      const asked = transcript.findIndex((l) => l.includes('comment te payer'));
+      if (asked < 0) return ['the payment was not asked'];
+      const after = transcript.slice(asked + 1);
+      return after.some((l) => l.includes('[PDF apercu.pdf')) &&
+        after.some((l) => l.includes('[boutons : Émettre / Pas encore]'))
+        ? []
+        : ['no invoice preview after the answer'];
+    },
+  },
+  {
     id: 'never-invents',
     messages: ['devis pour Kossi : 3 portes en bois'],
     maxTurns: 1,

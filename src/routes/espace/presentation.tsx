@@ -39,6 +39,7 @@ function emptyProfile(): Profile {
     defaultDelivery: null,
     defaultDepositPercent: null,
     defaultValidityDays: 30,
+    paymentInstructions: null,
   };
 }
 
@@ -62,6 +63,7 @@ function PresentationScreen() {
         email: profile.email,
         address: profile.address,
         legalMentions: profile.legalMentions,
+        paymentInstructions: profile.paymentInstructions,
         rccm: profile.rccm,
         taxId: profile.taxId,
         brandColor: profile.brandColor,
@@ -178,6 +180,7 @@ function PresentationScreen() {
           {text('rccm', m.profile_rccm())}
           {text('taxId', m.profile_tax_id())}
           {text('legalMentions', m.profile_mentions())}
+          {text('paymentInstructions', m.profile_payment())}
         </section>
 
         <section className="flex flex-col gap-4">

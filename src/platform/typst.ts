@@ -11,7 +11,7 @@ import { RenderingError } from '@/features/documents';
  * checked against its manifest before every compilation, copied into a private temporary folder,
  * and compiled to PDF/A-2b with a fixed creation time — the same input gives the same PDF.
  */
-export const TEMPLATE_VERSION = 'firmo-document-v4';
+export const TEMPLATE_VERSION = 'firmo-document-v5';
 const MAX_LOGO_BYTES = 512 * 1024;
 
 /**

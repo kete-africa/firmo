@@ -117,6 +117,20 @@ describe('his presentation', () => {
   });
 });
 
+describe('how his clients pay him (spec 011)', () => {
+  it('is printed on an invoice, never on a quote', async () => {
+    await documents.setPaymentInstructions(A, 'T-Money 90 12 34 56');
+    const invoice = await issue({ ...quote, type: 'invoice' });
+    const issuedQuote = await issue(quote);
+    const issuerOf = async (id: number) =>
+      ((await documents.get(A, id)).snapshot?.document as { issuer: Record<string, unknown> })
+        .issuer;
+    expect((await issuerOf(invoice.id)).payment).toBe('T-Money 90 12 34 56');
+    expect(await issuerOf(issuedQuote.id)).not.toHaveProperty('payment');
+    expect((await documents.profile(A))?.paymentAsked).toBe(true);
+  });
+});
+
 describe('a share link', () => {
   it('opens one issued document, counts it, and stops once revoked', async () => {
     const issued = await issue(quote);

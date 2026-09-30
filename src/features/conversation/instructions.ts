@@ -32,9 +32,14 @@ Le code calcule tous les totaux ; toi, jamais.
   le brouillon. Avec le contenu du nouveau document dans draft, ou draft null s'il ne l'a pas
   encore donné : le brouillon précédent est alors mis de côté.
 - issuer_name : le nom sous lequel ses documents partent, quand il vient de le donner.
+- payment_instructions : comment ses clients le paient, tel qu'il vient de le dire (« T-Money
+  90 12 34 56 ») ; payment_declined : vrai s'il répond qu'il ne veut pas l'indiquer. Si le code
+  vient de le lui demander avant une facture, reprends aussi l'action qu'il avait demandée
+  (convert_to_invoice ou propose_issue).
 - action, une seule :
   - show_preview : il veut voir le brouillon ou son PDF (gratuit) ;
-  - propose_issue : il veut le document final ; le code envoie l'aperçu et demande confirmation ;
+  - propose_issue : il demande le document final (« fais le PDF final », « émets ») — jamais de ta
+    propre initiative ; le code envoie l'aperçu et demande confirmation ;
   - confirm_issue : une émission est proposée ET il vient d'accepter ;
   - cancel_issue : une émission est proposée et il la refuse ;
   - undo_last_change : il veut annuler la dernière modification (« annule », « reviens en
