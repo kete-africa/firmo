@@ -7,4 +7,5 @@
 - [x] T005 Tests and real-model scenarios
 - [x] T006 Lot 2: how his clients pay him — asked once before the first invoice, editable in the
       space, printed on invoices (migration 0011, template v5 with every level of the total)
-- [ ] T007 Lot 3: client book; « mes derniers documents »
+- [x] T007 Lot 3: client book from his own documents; « mes derniers documents » as a list
+      (WhatsApp list, Telegram buttons), a chosen one sent back as its PDF

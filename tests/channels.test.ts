@@ -260,3 +260,54 @@ describe('what the channels send (spec 011)', () => {
     expect(calls[0]?.body).toEqual({ chat_id: '777', action: 'typing' });
   });
 });
+
+describe('lists (spec 011, lot 3)', () => {
+  it('WhatsApp: a list message, and a chosen row comes back as an action', async () => {
+    const calls: Record<string, unknown>[] = [];
+    const fetch = (async (_url: string, init?: { body?: unknown }) => {
+      calls.push(JSON.parse(String(init?.body)) as Record<string, unknown>);
+      return new Response('{}', { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+    const channel = whatsappChannel({
+      accessToken: 't',
+      phoneNumberId: 'p',
+      appSecret: 's',
+      verifyToken: 'v',
+      fetch,
+    });
+    await channel.sendList?.('22890000000', 'Tes derniers documents', 'Voir la liste', [
+      { id: 'doc:pdf:7', title: 'DEV-2026-001', description: 'M. Kodjo · Portail · émis' },
+    ]);
+    expect(calls[0]).toMatchObject({
+      type: 'interactive',
+      interactive: {
+        type: 'list',
+        action: {
+          button: 'Voir la liste',
+          sections: [{ rows: [{ id: 'doc:pdf:7', title: 'DEV-2026-001' }] }],
+        },
+      },
+    });
+    const [chosen] = parseNotification({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                messages: [
+                  {
+                    from: '22890000000',
+                    id: 'w9',
+                    type: 'interactive',
+                    interactive: { type: 'list_reply', list_reply: { id: 'doc:pdf:7' } },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ],
+    });
+    expect(chosen).toMatchObject({ kind: 'action', action: 'doc:pdf:7' });
+  });
+});

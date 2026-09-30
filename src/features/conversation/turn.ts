@@ -61,6 +61,7 @@ export const ACTIONS = [
   'cancel_issue',
   'undo_last_change',
   'send_pdf',
+  'list_documents',
   'convert_to_proforma',
   'convert_to_invoice',
   'open_space',

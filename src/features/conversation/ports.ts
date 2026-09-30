@@ -38,6 +38,16 @@ export interface MessagingChannel {
   download(
     media: NonNullable<InboundMessage['media']>,
   ): Promise<{ bytes: Uint8Array; mediaType: string }>;
+  /**
+   * A list to choose from (his documents): WhatsApp's list message, Telegram's buttons one per
+   * row. A chosen row comes back as an action with its id.
+   */
+  sendList?(
+    to: string,
+    text: string,
+    buttonLabel: string,
+    rows: { id: string; title: string; description: string }[],
+  ): Promise<void>;
   /** Acknowledges a pressed button, where the channel expects it. */
   acknowledgeAction?(message: InboundMessage): Promise<void>;
   /**

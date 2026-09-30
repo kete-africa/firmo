@@ -268,5 +268,15 @@
   "chat_ask_payment": "Sur tes factures, j'indique comment te payer ? Donne par exemple ton numéro T-Money ou Flooz, ou réponds « non ».",
   "chat_issued_forward_quote": "Ton devis est émis. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer ».",
   "chat_issued_forward_proforma": "Ta proforma est émise. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer ».",
-  "chat_issued_forward_invoice": "Ta facture est émise. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer »."
+  "chat_issued_forward_invoice": "Ta facture est émise. Transfère ce PDF à {client} : appui long sur le PDF, puis « Transférer ».",
+  "chat_summary_client_book": "Client : {name} (repris de ton carnet)",
+  "chat_button_documents": "Mes documents",
+  "chat_documents_list": "Tes derniers documents : choisis-en un, je te renvoie son PDF.",
+  "chat_documents_button": "Voir la liste",
+  "chat_no_documents": "Tu n'as pas encore de document émis.",
+  "chat_state_issued": "émis",
+  "chat_state_accepted": "accepté",
+  "chat_state_refused": "refusé",
+  "chat_state_unanswered": "sans réponse",
+  "chat_state_cancelled": "annulé"
 }

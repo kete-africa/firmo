@@ -268,5 +268,15 @@
   "chat_ask_payment": "Shall I print on your invoices how to pay you? Give for example your mobile money number, or answer “no”.",
   "chat_issued_forward_quote": "Your quote is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”.",
   "chat_issued_forward_proforma": "Your proforma is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”.",
-  "chat_issued_forward_invoice": "Your invoice is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”."
+  "chat_issued_forward_invoice": "Your invoice is issued. Forward this PDF to {client}: long press on the PDF, then “Forward”.",
+  "chat_summary_client_book": "Client: {name} (from your client book)",
+  "chat_button_documents": "My documents",
+  "chat_documents_list": "Your latest documents: choose one, I send you its PDF again.",
+  "chat_documents_button": "See the list",
+  "chat_no_documents": "You have no issued document yet.",
+  "chat_state_issued": "issued",
+  "chat_state_accepted": "accepted",
+  "chat_state_refused": "refused",
+  "chat_state_unanswered": "no answer",
+  "chat_state_cancelled": "cancelled"
 }

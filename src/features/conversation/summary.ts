@@ -29,13 +29,26 @@ const money = (value: string, locale: ChatLocale) =>
 const signed = (value: string, locale: ChatLocale) =>
   value.startsWith('-') ? `− ${money(value.slice(1), locale)}` : `+ ${money(value, locale)}`;
 
-export function summaryForPerson(draft: WorkingDraft, locale: ChatLocale = 'fr'): string {
+export function summaryForPerson(
+  draft: WorkingDraft,
+  locale: ChatLocale = 'fr',
+  options: { fromBook?: boolean } = {},
+): string {
   const totals = totalsOf(draft);
   const lines: string[] = [
     m.chat_summary_title({ type: typeLabel(draft.document_type, locale) }, { locale }),
   ];
   if (draft.subject) lines.push(m.chat_summary_subject({ subject: draft.subject }, { locale }));
-  if (draft.client_name) lines.push(m.chat_summary_client({ name: draft.client_name }, { locale }));
+  if (draft.client_name) {
+    const client = [draft.client_name, draft.client_phone, draft.client_address]
+      .filter(Boolean)
+      .join(' · ');
+    lines.push(
+      options.fromBook
+        ? m.chat_summary_client_book({ name: client }, { locale })
+        : m.chat_summary_client({ name: client }, { locale }),
+    );
+  }
 
   const grouped = draft.sections.length > 1;
   draft.sections.forEach((section, s) => {

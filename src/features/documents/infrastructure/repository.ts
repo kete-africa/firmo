@@ -409,6 +409,30 @@ export async function listDocuments(tx: Transaction, limit: number): Promise<Doc
   }));
 }
 
+/**
+ * A client he already wrote a document for, by name (case and spaces aside): the phone and address
+ * of his latest document that has them. His own documents are his client book.
+ */
+export async function knownClient(
+  tx: Transaction,
+  name: string,
+): Promise<{ name: string; phone: string | null; address: string | null } | null> {
+  const [row] = await rows(
+    tx,
+    sql`select client_name, client_phone, client_address from documents
+        where lower(btrim(client_name)) = lower(btrim(${name}))
+          and (client_phone is not null or client_address is not null)
+        order by updated_at desc, id desc limit 1`,
+  );
+  return row
+    ? {
+        name: String(row.client_name),
+        phone: str(row.client_phone),
+        address: str(row.client_address),
+      }
+    : null;
+}
+
 export interface Lineage {
   rootDocumentId?: number | null;
   revision?: number;

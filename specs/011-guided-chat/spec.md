@@ -2,7 +2,7 @@
 
 **Feature Branch**: `012-guided-chat`
 **Created**: 2026-09-30
-**Status**: Lot 1 implemented; lots 2 and 3 to come
+**Status**: Implemented (lots 1, 2 and 3)
 **Input**: The author's test on staging (percentages without their amounts, no buttons) and the
 conversation he validated: « Continue ». Reusing past prices and automatic reminders wait for
 his ok.
