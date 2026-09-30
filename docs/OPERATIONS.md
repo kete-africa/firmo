@@ -38,8 +38,8 @@ Runtime only — none is available at build time:
 - `KETE_ACCOUNT_URL`; `FIRMO_CLIENT_ID`, `FIRMO_CLIENT_SECRET` and
   `KETE_OPERATORS_ORGANIZATION_ID` — set by kete-core's `staging:operator` (below).
 - `OPENAI_*`: the conversation's model.
-- Messaging, once decided: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`; `WHATSAPP_*`;
-  `FIRMO_WHATSAPP_NUMBER`, `FIRMO_TELEGRAM_BOT`.
+- Messaging: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`; `WHATSAPP_*`;
+  `FIRMO_WHATSAPP_NUMBER=22879023048`, `FIRMO_TELEGRAM_BOT=VTT_Firmo_bot`.
 - Kete Cockpit, once Firmo is registered there: `KETE_RECEIVER_URL`, `KETE_KEY_ID`,
   `KETE_KEY_SECRET`.
 
@@ -68,11 +68,24 @@ Steps 2 and 3 run from the author's machine until a deploy-only Coolify token ex
    `KETE_RECEIVER_URL=https://cockpit-kete-staging.13.140.178.49.sslip.io/api/events`; redeploy.
 3. **Subscriptions**: the Firmo offer in the Compte Kete (`offers set --app firmo …`, kete-core)
    and its Chariow product, published in the Chariow dashboard.
-4. **Messaging**: the bot `VTT_Firmo_bot` and the WhatsApp number currently serve the previous
-   Firmo (`api-staging.vttlife.com`). Pointing them at this staging takes them from it: the
-   author decides when. Then: set the variables above, and
-   - Telegram: `setWebhook` to `…/webhooks/telegram` with the secret token;
-   - WhatsApp: in Meta's dashboard, the callback `…/webhooks/whatsapp` and the verify token.
+
+### Messaging channels
+
+Since 2026-09-30, on the author's decision, the bot `VTT_Firmo_bot` and the WhatsApp number
++228 79 02 30 48 deliver to this staging; they served the previous Firmo
+(`https://api-staging.vttlife.com`) before.
+
+- `pnpm channels:show` — where each channel delivers now.
+- `pnpm channels:point <https origin>` — points the Telegram webhook (with its secret token) and the
+  WhatsApp app's subscription (Meta verifies the callback at once) at an instance. Back to the
+  previous Firmo: `pnpm channels:point https://api-staging.vttlife.com`.
+
+Both read the channels' credentials from the local `.env`. The instance must already hold the same
+channel variables, or Meta's verification and every message fail.
+
+Until kete-core's `staging:operator` has run, Firmo cannot provision the person who writes: a
+message is stored, fails after its attempts, and the person is told to try again later — it then
+shows among the operators' failed messages.
 
 ## Production
 

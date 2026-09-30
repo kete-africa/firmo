@@ -20,6 +20,8 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:migrate": "tsx scripts/migrate.ts",
+    "channels:show": "tsx scripts/channels.ts show",
+    "channels:point": "tsx scripts/channels.ts point",
     "eval:conversation": "tsx --tsconfig tsconfig.json scripts/eval-conversation.ts"
   },
   "dependencies": {
