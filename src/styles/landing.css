@@ -1,0 +1,121 @@
+/* Firmo's public page (spec 013): what the utilities do not say — the voice note's wave, the one
+   authored moment (the conversation arriving step by step), and the questions' markers. */
+
+.landing-out {
+  justify-self: end;
+}
+
+.landing-wave {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+}
+
+.landing-wave i {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.85;
+  height: 30%;
+}
+
+.landing-wave i:nth-child(3n + 1) {
+  height: 85%;
+}
+
+.landing-wave i:nth-child(4n + 2) {
+  height: 55%;
+}
+
+.landing-wave i:nth-child(5n + 3) {
+  height: 100%;
+}
+
+.landing-wave i:nth-child(7n) {
+  height: 40%;
+}
+
+/* The conversation arrives in the order it happens. Everything is visible by default: the
+   sequence plays only for who accepts motion, once, and ends in the same state. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-step {
+    animation: landing-arrive 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .landing-step:nth-child(1) {
+    animation-delay: 150ms;
+  }
+
+  .landing-step:nth-child(2) {
+    animation-delay: 700ms;
+  }
+
+  .landing-step:nth-child(3) {
+    animation-delay: 1500ms;
+  }
+
+  .landing-step:nth-child(4) {
+    animation-delay: 2500ms;
+  }
+
+  .landing-step:nth-child(5) {
+    animation-delay: 3100ms;
+  }
+
+  .landing-wave i {
+    transform-origin: center;
+    animation: landing-speak 900ms ease-in-out 150ms 3 both;
+  }
+
+  .landing-wave i:nth-child(2n) {
+    animation-delay: 300ms;
+  }
+
+  .landing-wave i:nth-child(3n) {
+    animation-delay: 450ms;
+  }
+}
+
+@keyframes landing-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(3px);
+  }
+}
+
+@keyframes landing-speak {
+  50% {
+    transform: scaleY(0.45);
+  }
+}
+
+.landing-faq summary {
+  list-style: none;
+}
+
+.landing-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.landing-faq summary::after {
+  content: '';
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-3px) rotate(45deg);
+  transition: transform 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.landing-faq[open] summary::after {
+  transform: translateY(3px) rotate(-135deg);
+}
+
+.landing :is(a, button, summary):focus-visible {
+  outline: 3px solid var(--color-action);
+  outline-offset: 3px;
+}

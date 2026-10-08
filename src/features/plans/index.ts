@@ -3,6 +3,7 @@ export {
   FREE_DOCUMENTS,
   PERIOD_DAYS,
   PERIOD_DOCUMENTS,
+  PERIOD_PRICE_FCFA,
   periodStart,
   standingOf,
   type Standing,
