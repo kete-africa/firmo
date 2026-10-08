@@ -31,6 +31,14 @@ test('the quote shown is a real file, said to be a demonstration', async ({ page
   expect((await request.get('/landing/devis-exemple.png')).status()).toBe(200);
 });
 
+test('a staging or local address is never indexed', async ({ request }) => {
+  const robots = await request.get('/robots.txt');
+  expect(robots.status()).toBe(200);
+  const rules = (await robots.text()).split(/\s*\n\s*/).filter(Boolean);
+  expect(rules).toEqual(['User-agent: *', 'Disallow: /']);
+  expect((await request.get('/favicon.svg')).status()).toBe(200);
+});
+
 test('the page exists in English', async ({ page, context }) => {
   await context.addCookies([{ name: 'kete_locale', value: 'en', url: 'http://localhost:3401' }]);
   await page.goto('/');
