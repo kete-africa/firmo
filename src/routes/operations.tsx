@@ -24,6 +24,11 @@ export const Route = createFileRoute('/operations')({
 /** A moment as its server writes it, in UTC: the same on every screen. */
 const moment = (iso: string) => `${iso.slice(0, 16).replace('T', ' ')} UTC`;
 
+const feedbackKind = (kind: 'problem' | 'idea' | 'praise') =>
+  ({ problem: m.ops_feedback_problem, idea: m.ops_feedback_idea, praise: m.ops_feedback_praise })[
+    kind
+  ]();
+
 function OperationsScreen() {
   const { operator } = Route.useRouteContext();
   const data = Route.useLoaderData();
@@ -90,6 +95,28 @@ function OperationsScreen() {
                 <TextField label={m.ops_reason()} name="reason" required minLength={5} />
                 <Button type="submit">{m.ops_read()}</Button>
               </form>
+            </section>
+
+            <section className="flex flex-col gap-3">
+              <SectionTitle>{m.ops_feedback()}</SectionTitle>
+              {data.feedback.length === 0 ? (
+                <p className="text-body text-bark">{m.ops_feedback_empty()}</p>
+              ) : (
+                <ul className="flex flex-col bg-paper">
+                  {data.feedback.map((line) => (
+                    <li key={line.id} className="flex flex-col gap-1 border-b border-rule p-3">
+                      <span className="font-semibold">
+                        {feedbackKind(line.kind)} · {line.organizationId}
+                      </span>
+                      <span className="text-body-sm text-bark">
+                        {moment(line.createdAt)}
+                        {line.page ? ` · ${line.page}` : ''}
+                      </span>
+                      <span className="text-body-sm whitespace-pre-wrap">{line.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </section>
 
             <section className="flex flex-col gap-3">

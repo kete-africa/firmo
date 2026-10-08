@@ -2,6 +2,7 @@
 export {
   createOperations,
   OperationError,
+  type FeedbackLine,
   type Incident,
   type JournalEntry,
   type Operations,

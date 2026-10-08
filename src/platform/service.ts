@@ -13,8 +13,24 @@ export function manifest(): Manifest {
     name: 'Firmo',
     version: VERSION,
     environment: env.environment,
-    // Spec 008: what Kete Cockpit hears from Firmo (src/platform/events.ts).
-    events: ['document.issued', 'document.shared', 'ai.usage'],
+    // Spec 008: what Kete Cockpit hears from Firmo (src/platform/events.ts); spec 012: the day's
+    // figures (src/platform/metrics.ts).
+    events: ['document.issued', 'document.shared', 'ai.usage', 'metrics.daily'],
+    // Firmo's identity card (doctrine D-040): who answers for it, what it handles, what an
+    // outage costs.
+    governance: {
+      owner: { name: 'Kete' },
+      // Names and phone numbers of tradesmen and their clients; quotes and invoices with their
+      // amounts — a negotiating position, never to leave the organization.
+      dataCategories: ['personal', 'financial', 'confidential'],
+      ai: {
+        used: true,
+        purpose:
+          'Transcribes a voice note, reads a photo of a paper quote and structures the lines it heard or read. It never writes, suggests or corrects an amount.',
+      },
+      // Without Firmo a tradesman goes back to paper: his work slows down, nothing is lost.
+      criticality: 'medium',
+    },
   });
 }
 

@@ -15,6 +15,7 @@ import { Route as HealthRouteImport } from './routes/health'
 import { Route as LienExpireRouteImport } from './routes/lien-expire'
 import { Route as OperationsRouteImport } from './routes/operations'
 import { Route as DotwellKnownKeteRouteImport } from './routes/[.]well-known/kete'
+import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as AuthConnexionRouteImport } from './routes/auth/connexion'
 import { Route as AuthSortieRouteImport } from './routes/auth/sortie'
@@ -59,6 +60,11 @@ const OperationsRoute = OperationsRouteImport.update({
 const DotwellKnownKeteRoute = DotwellKnownKeteRouteImport.update({
   id: '/.well-known/kete',
   path: '/.well-known/kete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
+  id: '/api/feedback',
+  path: '/api/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -144,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/lien-expire': typeof LienExpireRoute
   '/operations': typeof OperationsRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
@@ -166,6 +173,7 @@ export interface FileRoutesByTo {
   '/lien-expire': typeof LienExpireRoute
   '/operations': typeof OperationsRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/lien-expire': typeof LienExpireRoute
   '/operations': typeof OperationsRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/auth/connexion': typeof AuthConnexionRoute
   '/auth/sortie': typeof AuthSortieRoute
@@ -215,6 +224,7 @@ export interface FileRouteTypes {
     | '/lien-expire'
     | '/operations'
     | '/.well-known/kete'
+    | '/api/feedback'
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
@@ -237,6 +247,7 @@ export interface FileRouteTypes {
     | '/lien-expire'
     | '/operations'
     | '/.well-known/kete'
+    | '/api/feedback'
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
@@ -260,6 +271,7 @@ export interface FileRouteTypes {
     | '/lien-expire'
     | '/operations'
     | '/.well-known/kete'
+    | '/api/feedback'
     | '/auth/callback'
     | '/auth/connexion'
     | '/auth/sortie'
@@ -284,6 +296,7 @@ export interface RootRouteChildren {
   LienExpireRoute: typeof LienExpireRoute
   OperationsRoute: typeof OperationsRoute
   DotwellKnownKeteRoute: typeof DotwellKnownKeteRoute
+  ApiFeedbackRoute: typeof ApiFeedbackRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
   AuthConnexionRoute: typeof AuthConnexionRoute
   AuthSortieRoute: typeof AuthSortieRoute
@@ -338,6 +351,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/kete'
       fullPath: '/.well-known/kete'
       preLoaderRoute: typeof DotwellKnownKeteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/feedback': {
+      id: '/api/feedback'
+      path: '/api/feedback'
+      fullPath: '/api/feedback'
+      preLoaderRoute: typeof ApiFeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/callback': {
@@ -474,6 +494,7 @@ const rootRouteChildren: RootRouteChildren = {
   LienExpireRoute: LienExpireRoute,
   OperationsRoute: OperationsRoute,
   DotwellKnownKeteRoute: DotwellKnownKeteRoute,
+  ApiFeedbackRoute: ApiFeedbackRoute,
   AuthCallbackRoute: AuthCallbackRoute,
   AuthConnexionRoute: AuthConnexionRoute,
   AuthSortieRoute: AuthSortieRoute,

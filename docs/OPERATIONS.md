@@ -63,9 +63,11 @@ Steps 2 and 3 run from the author's machine until a deploy-only Coolify token ex
    two-factor). It registers Firmo with `kete:people`, sets its client and the operators'
    organization on `firmo-staging`, and redeploys it. Until then, `/espace` and `/operations`
    answer 500: Firmo cannot sign anyone in.
-2. **Kete Cockpit**: register `https://firmo-staging.13.140.178.49.sslip.io` in the Cockpit; give
-   `firmo-staging` the shown key (`KETE_KEY_ID`, `KETE_KEY_SECRET`) and
-   `KETE_RECEIVER_URL=https://cockpit-kete-staging.13.140.178.49.sslip.io/api/events`; redeploy.
+2. **Kete Cockpit**: sign in to the Cockpit, register `https://firmo-staging.13.140.178.49.sslip.io`
+   (Apps), then run `pnpm cockpit:connect` here: it asks for the key the Cockpit just showed, sends
+   it to `firmo-staging` (`KETE_KEY_ID`, `KETE_KEY_SECRET`, `KETE_RECEIVER_URL`) and redeploys.
+   `pnpm cockpit:status` then says whether the events that waited have left. The Cockpit must run
+   `@kete/sdk` 0.6 or later: an older one refuses Firmo's manifest (`kete-africa/kete-cockpit#3`).
 3. **Subscriptions**: the Firmo offer in the Compte Kete (`offers set --app firmo …`, kete-core)
    and its Chariow product, published in the Chariow dashboard.
 
