@@ -52,7 +52,7 @@ Build time only: `KETE_PACKAGES_TOKEN` (read:packages), passed as a Docker build
 2. Migrate `dev` with the **owner** role — the container never holds it: `pnpm db:migrate dev`
    (reads `FIRMO_DEV_OWNER_URL` from the local `.env`).
 3. Deploy: `POST /api/v1/deploy` on Coolify with `{"uuid": "tzhsp5ehomtd4bpmgjkvcgr7"}`.
-4. Check: `/health` says `healthy`, `/.well-known/kete` says `staging` with its three events.
+4. Check: `/health` says `healthy`, `/.well-known/kete` says `staging` with its four events and its card.
 
 Steps 2 and 3 run from the author's machine until a deploy-only Coolify token exists.
 
