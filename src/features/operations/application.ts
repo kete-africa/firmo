@@ -31,6 +31,16 @@ export interface JournalEntry {
   createdAt: string;
 }
 
+/** What a person said from her space (spec 012) — never who said it. */
+export interface FeedbackLine {
+  id: string;
+  organizationId: string;
+  kind: 'problem' | 'idea' | 'praise';
+  message: string;
+  page: string | null;
+  createdAt: string;
+}
+
 const readingInput = z.object({
   organizationId: z
     .string()
@@ -73,6 +83,19 @@ export function createOperations(deps: { documents: Documents }) {
         action: String(row.action),
         subject: String(row.subject),
         reason: String(row.reason),
+        createdAt: iso(row.created_at),
+      }));
+    },
+
+    /** What people said from their space, the latest first. */
+    async feedback(limit = 50): Promise<FeedbackLine[]> {
+      const result = await db.execute(sql`select * from public.operator_feedback(${limit})`);
+      return result.rows.map((row) => ({
+        id: String(row.feedback_id),
+        organizationId: String(row.organization_id),
+        kind: String(row.kind) as FeedbackLine['kind'],
+        message: String(row.message),
+        page: row.page === null ? null : String(row.page),
         createdAt: iso(row.created_at),
       }));
     },

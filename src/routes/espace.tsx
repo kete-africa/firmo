@@ -1,3 +1,4 @@
+import { FeedbackButton } from '@kete/feedback/button';
 import { createFileRoute, Link, Outlet, redirect } from '@tanstack/react-router';
 import { fetchMember } from '@/features/space';
 import { BottomNav, LanguageSwitch, Wordmark } from '@/lib/ui';
@@ -41,6 +42,34 @@ function Layout() {
       </header>
       <main className="mx-auto max-w-xl">
         <Outlet />
+        {/* What goes wrong, an idea, what works — said where it happens (spec 012). */}
+        <div className="px-4 pt-6">
+          <FeedbackButton
+            labels={{
+              open: m.feedback_open(),
+              title: m.feedback_title(),
+              kindsLabel: m.feedback_kinds(),
+              kinds: {
+                problem: m.feedback_problem(),
+                idea: m.feedback_idea(),
+                praise: m.feedback_praise(),
+              },
+              message: m.feedback_message(),
+              send: m.feedback_send(),
+              close: m.feedback_close(),
+              thanks: m.feedback_thanks(),
+              error: m.feedback_error(),
+            }}
+            onSubmit={async (input) => {
+              const answer = await fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify(input),
+              });
+              if (!answer.ok) throw new Error('feedback_refused');
+            }}
+          />
+        </div>
       </main>
       <BottomNav chatUrl={chatUrl} />
     </div>

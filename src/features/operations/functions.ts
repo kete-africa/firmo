@@ -21,6 +21,10 @@ export const fetchOperations = createServerFn({ method: 'GET' }).handler(async (
     throw new Error('not_an_operator');
   }
   const { operations } = services();
-  const [incidents, journal] = await Promise.all([operations.incidents(), operations.journal()]);
-  return { incidents, journal };
+  const [incidents, journal, feedback] = await Promise.all([
+    operations.incidents(),
+    operations.journal(),
+    operations.feedback(),
+  ]);
+  return { incidents, journal, feedback };
 });

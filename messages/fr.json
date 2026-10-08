@@ -278,5 +278,21 @@
   "chat_state_accepted": "accepté",
   "chat_state_refused": "refusé",
   "chat_state_unanswered": "sans réponse",
-  "chat_state_cancelled": "annulé"
+  "chat_state_cancelled": "annulé",
+  "feedback_open": "Dire quelque chose à Firmo",
+  "feedback_title": "Dis-nous",
+  "feedback_kinds": "C’est à propos de",
+  "feedback_problem": "Quelque chose ne va pas",
+  "feedback_idea": "Une idée",
+  "feedback_praise": "Quelque chose qui marche bien",
+  "feedback_message": "Ton message",
+  "feedback_send": "Envoyer",
+  "feedback_close": "Fermer",
+  "feedback_thanks": "C’est noté. Merci.",
+  "feedback_error": "Ton message n’est pas parti. Réessaie dans un instant.",
+  "ops_feedback": "Ce que disent les personnes",
+  "ops_feedback_empty": "Personne n’a encore rien dit.",
+  "ops_feedback_problem": "Problème",
+  "ops_feedback_idea": "Idée",
+  "ops_feedback_praise": "Ce qui marche"
 }

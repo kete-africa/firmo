@@ -3,7 +3,7 @@
 ## Metadata
 
 - **Status**: `candidate`
-- **Last updated**: `2026-09-29`
+- **Last updated**: `2026-10-08`
 - **Product boundary**: a tradesman's quotes, proformas and invoices, from a voice note, a photo or
   a text on WhatsApp or Telegram — his prices, our presentation.
 - **Planning axis**: `DEPENDENCIES_AND_EVIDENCE_NOT_TIME`
@@ -35,6 +35,7 @@ flowchart LR
   P4 --> P5[5 · Plans and quota]
   P5 --> P6[6 · Operations and Kete]
   P6 --> P7[7 · Staging]
+  P7 --> P8[8 · Today's chassis]
 ```
 
 ---
@@ -311,6 +312,28 @@ Firmo runs on staging, with its real channels.
 - `[agent]` `/health` healthy and `/.well-known/kete` says `staging`; the Cockpit reads it.
 - `[human]` The author validates the client, payment and messaging journeys before any
   production.
+
+---
+
+## Phase 8 — Today's chassis · `specs/012-kete-current` · _delivered; one human proof pending_
+
+### Objective
+
+Firmo stands on the Kete chassis as it is today, and Kete hears and reads it.
+
+### Scope
+
+- `@kete/auth` 0.3, `@kete/design` 0.6, `@kete/files` 0.4, `@kete/sdk` 0.6; the identity card in the
+  manifest (doctrine D-040).
+- The feedback button in his space (`@kete/feedback`), read by Kete operators.
+- The day's figures (`metrics.daily`): counters only, announced once a day.
+- `pnpm cockpit:connect` and `pnpm cockpit:status`: the Cockpit's key goes from the operator's
+  terminal to the hosting environment, never through a file.
+
+### Proof
+
+- `[agent]` `tests/chassis.test.ts`, and the whole suite on the new packages.
+- `[human]` Firmo registered in the staging Cockpit; no event waits.
 
 ---
 

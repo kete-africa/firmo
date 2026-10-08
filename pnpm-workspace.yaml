@@ -4,6 +4,9 @@ packages:
 allowBuilds:
   esbuild: true
   sharp: true
+  # @kete/files reads with officeparser, which brings Tesseract for an OCR Firmo does not use
+  # (photos go to the model).
+  tesseract.js: false
 
 # Kete's own packages are trusted as soon as kete-core's CI publishes them; every other package
 # keeps pnpm's minimum release age (supply-chain protection).
