@@ -34,7 +34,7 @@ describe('the foundation', () => {
     expect(manifest()).toMatchObject({
       product: 'prd_firmo',
       name: 'Firmo',
-      events: ['document.issued', 'document.shared', 'ai.usage'],
+      events: ['document.issued', 'document.shared', 'ai.usage', 'metrics.daily'],
     });
   });
 });
