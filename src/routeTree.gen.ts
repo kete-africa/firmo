@@ -14,6 +14,7 @@ import { Route as EspaceRouteImport } from './routes/espace'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as LienExpireRouteImport } from './routes/lien-expire'
 import { Route as OperationsRouteImport } from './routes/operations'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as DotwellKnownKeteRouteImport } from './routes/[.]well-known/kete'
 import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
@@ -55,6 +56,11 @@ const LienExpireRoute = LienExpireRouteImport.update({
 const OperationsRoute = OperationsRouteImport.update({
   id: '/operations',
   path: '/operations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DotwellKnownKeteRoute = DotwellKnownKeteRouteImport.update({
@@ -149,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
   '/operations': typeof OperationsRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
   '/operations': typeof OperationsRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/health': typeof HealthRoute
   '/lien-expire': typeof LienExpireRoute
   '/operations': typeof OperationsRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/.well-known/kete': typeof DotwellKnownKeteRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -223,6 +232,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/lien-expire'
     | '/operations'
+    | '/robots.txt'
     | '/.well-known/kete'
     | '/api/feedback'
     | '/auth/callback'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/lien-expire'
     | '/operations'
+    | '/robots.txt'
     | '/.well-known/kete'
     | '/api/feedback'
     | '/auth/callback'
@@ -270,6 +281,7 @@ export interface FileRouteTypes {
     | '/health'
     | '/lien-expire'
     | '/operations'
+    | '/robots.txt'
     | '/.well-known/kete'
     | '/api/feedback'
     | '/auth/callback'
@@ -295,6 +307,7 @@ export interface RootRouteChildren {
   HealthRoute: typeof HealthRoute
   LienExpireRoute: typeof LienExpireRoute
   OperationsRoute: typeof OperationsRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   DotwellKnownKeteRoute: typeof DotwellKnownKeteRoute
   ApiFeedbackRoute: typeof ApiFeedbackRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
@@ -344,6 +357,13 @@ declare module '@tanstack/react-router' {
       path: '/operations'
       fullPath: '/operations'
       preLoaderRoute: typeof OperationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/.well-known/kete': {
@@ -493,6 +513,7 @@ const rootRouteChildren: RootRouteChildren = {
   HealthRoute: HealthRoute,
   LienExpireRoute: LienExpireRoute,
   OperationsRoute: OperationsRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   DotwellKnownKeteRoute: DotwellKnownKeteRoute,
   ApiFeedbackRoute: ApiFeedbackRoute,
   AuthCallbackRoute: AuthCallbackRoute,

@@ -69,7 +69,9 @@ Steps 2 and 3 run from the author's machine until a deploy-only Coolify token ex
    `pnpm cockpit:status` then says whether the events that waited have left. The Cockpit must run
    `@kete/sdk` 0.6 or later: an older one refuses Firmo's manifest (`kete-africa/kete-cockpit#3`).
 3. **Subscriptions**: the Firmo offer in the Compte Kete (`offers set --app firmo …`, kete-core)
-   and its Chariow product, published in the Chariow dashboard.
+   and its Chariow product, published in the Chariow dashboard. The public page
+   says what a period costs (`PERIOD_PRICE_FCFA` in `src/features/plans/domain.ts`, 2 000 F CFA):
+   the offer's price at the Compte Kete must be the same.
 
 ### Messaging channels
 

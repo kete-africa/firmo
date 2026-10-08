@@ -6,6 +6,11 @@
 export const FREE_DOCUMENTS = 3;
 export const PERIOD_DOCUMENTS = 30;
 export const PERIOD_DAYS = 30;
+/**
+ * What a period costs, in F CFA, as the public page says it (docs/product/strategie.md). The
+ * amount actually charged is the Firmo offer's at the Compte Kete: keep the two equal.
+ */
+export const PERIOD_PRICE_FCFA = 2000;
 
 export type Standing =
   /** Still within the offered documents. */

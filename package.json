@@ -24,6 +24,7 @@
     "channels:point": "tsx scripts/channels.ts point",
     "cockpit:connect": "tsx scripts/cockpit.ts connect",
     "cockpit:status": "tsx scripts/cockpit.ts status",
+    "landing:sample": "tsx --tsconfig tsconfig.json scripts/landing-sample.ts",
     "eval:conversation": "tsx --tsconfig tsconfig.json scripts/eval-conversation.ts"
   },
   "dependencies": {

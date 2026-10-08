@@ -1,16 +1,30 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { fetchLanding, LandingPage } from '@/features/landing/client';
 import * as m from '@/paraglide/messages.js';
 
-// Phase 0: the address answers. The landing page comes with the client space (phase 4).
+// Firmo's public page (spec 013): the offer, and the way into the conversation.
 export const Route = createFileRoute('/')({
+  loader: () => fetchLanding(),
+  head: ({ loaderData }) => {
+    const origin = loaderData?.origin;
+    return {
+      meta: [
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: m.meta_title() },
+        { property: 'og:description', content: m.meta_description() },
+        // The card shows a quote, never the logo (docs/product/identite.md).
+        ...(origin
+          ? [
+              { property: 'og:url', content: origin },
+              { property: 'og:image', content: `${origin}/landing/devis-exemple.png` },
+            ]
+          : []),
+      ],
+    };
+  },
   component: Home,
 });
 
 function Home() {
-  return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col justify-center gap-4 px-4">
-      <h1 className="font-display text-4xl">{m.home_title()}</h1>
-      <p className="font-body text-lg">{m.home_promise()}</p>
-    </main>
-  );
+  return <LandingPage data={Route.useLoaderData()} />;
 }

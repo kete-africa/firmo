@@ -36,6 +36,7 @@ flowchart LR
   P5 --> P6[6 · Operations and Kete]
   P6 --> P7[7 · Staging]
   P7 --> P8[8 · Today's chassis]
+  P8 --> P9[9 · The public page]
 ```
 
 ---
@@ -334,6 +335,27 @@ Firmo stands on the Kete chassis as it is today, and Kete hears and reads it.
 
 - `[agent]` `tests/chassis.test.ts`, and the whole suite on the new packages.
 - `[human]` Firmo registered in the staging Cockpit; no event waits.
+
+---
+
+## Phase 9 — The public page · `specs/013-landing` · _delivered; one human proof pending_
+
+### Objective
+
+Whoever hears of Firmo understands the offer in one screen and opens the conversation.
+
+### Scope
+
+- The page at `/`, ordered by the value equation (Hormozi): the result, why believe it, how soon,
+  at what effort, at what risk — in the voice of `docs/product/voix.md`, French and English.
+- The quote shown is rendered by Firmo (`pnpm landing:sample`) and labeled a demonstration; the
+  offer is written as a quote, its figures read from the plans.
+- No proof claimed that does not exist, no scarcity, no form.
+
+### Proof
+
+- `[agent]` `e2e/landing.spec.ts` at 375 px, in both languages.
+- `[human]` The author reads the page aloud.
 
 ---
 
